@@ -4,7 +4,7 @@ TARGET  = libm17.so
 
 CFLAGS  = $(INC) -fPIC -Wall -Wextra
 LDFLAGS = -shared -lm
-SRCS    = $(filter-out unit_tests/unit_tests.c, $(wildcard */*.c))
+SRCS    = m17.c $(filter-out unit_tests/unit_tests.c, $(wildcard */*.c))
 OBJS    = $(SRCS:.c=.o)
 
 all: $(TARGET) clean
