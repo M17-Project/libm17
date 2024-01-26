@@ -245,7 +245,7 @@ void decode_LICH(uint8_t outp[6], const uint16_t inp[96])
 {
     uint16_t tmp;
 
-    //memset(outp, 0, 6);
+    memset(outp, 0, 6);
 
     tmp=golay24_sdecode(&inp[0]);
     outp[0]=(tmp>>4)&0xFF;
