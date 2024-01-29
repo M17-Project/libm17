@@ -10,7 +10,7 @@ Written in C, it has all the components described by the protocol's specificatio
 
 There's no support for **any** encryption.
 
-### Legacy Makefile Building
+### Legacy Makefile building
 First, build the shared object `libm17.so` by running `make`.
 Then, you can install the library object with `make install`.
 Unit tests are available and can be run with `make test && make testrun`.
