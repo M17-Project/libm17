@@ -12,10 +12,10 @@
 #include <m17.h>
 
 /**
- * @brief Decode a 6-byte long array (little-endian) into callsign string.
+ * @brief Decode a 6-byte long array (big-endian) into callsign string.
  * 
  * @param outp Decoded callsign string.
- * @param inp Pointer to a byte array holding the encoded value (little-endian).
+ * @param inp Pointer to a byte array holding the encoded value (big-endian).
  */
 void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6])
 {
@@ -23,7 +23,7 @@ void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6])
 
 	//repack the data to a uint64_t
 	for(uint8_t i=0; i<6; i++)
-		encoded|=(uint64_t)inp[i]<<(8*i);
+		encoded|=(uint64_t)inp[5-i]<<(8*i);
 
 	//check if the value is reserved (not a callsign)
 	if(encoded>=262144000000000ULL)
@@ -88,9 +88,9 @@ void decode_callsign_value(uint8_t *outp, const uint64_t inp)
 }
 
 /**
- * @brief Encode callsign string and store in a 6-byte array (little-endian)
+ * @brief Encode callsign string and store in a 6-byte array (big-endian)
  * 
- * @param out Pointer to a byte array for the encoded value (little-endian).
+ * @param out Pointer to a byte array for the encoded value (big-endian).
  * @param inp Callsign string.
  * @return int8_t Return value, 0 -> OK.
  */
@@ -126,7 +126,7 @@ int8_t encode_callsign_bytes(uint8_t out[6], const uint8_t *inp)
     }
 
 	for(uint8_t i=0; i<6; i++)
-    	out[i]=(tmp>>(8*i))&0xFF;
+    	out[5-i]=(tmp>>(8*i))&0xFF;
     	
     return 0;
 }
