@@ -9,7 +9,7 @@
 /**
  * @brief Generate symbol stream for a preamble.
  * 
- * @param out Frame buffer (192 floats)
+ * @param out Frame buffer (192 floats).
  * @param cnt Pointer to a variable holding the number of written symbols.
  * @param type Preamble type (pre-BERT or pre-LSF).
  */
@@ -48,21 +48,20 @@ void send_syncword(float out[SYM_PER_SWD], uint32_t *cnt, const uint16_t syncwor
     }
 }
 
-//send the data (can be used for both LSF and frames)
 /**
- * @brief Generate symbol stream for frame contents (without syncword).
+ * @brief Generate symbol stream for frame contents (without the syncword).
  * Can be used for both LSF and data frames.
  * 
  * @param out Output buffer (184 floats).
  * @param cnt Pointer to a variable holding the number of written symbols.
- * @param in Data input.
+ * @param in Data input - unpacked bits (1 bit per byte).
  */
 void send_data(float out[SYM_PER_PLD], uint32_t *cnt, const uint8_t* in)
 {
-	for(uint16_t i=0; i<SYM_PER_PLD; i++) //40ms * 4800 - 8 (syncword)
-	{
+    for(uint16_t i=0; i<SYM_PER_PLD; i++) //40ms * 4800 - 8 (syncword)
+    {
         out[(*cnt)++]=symbol_map[in[2*i]*2+in[2*i+1]];
-	}
+    }
 }
 
 /**
