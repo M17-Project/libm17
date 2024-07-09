@@ -17,7 +17,7 @@
  * @param cnt LICH counter (0 to 5)
  * @param inp Pointer to an LSF struct.
  */
-void extract_LICH(uint8_t outp[6], const uint8_t cnt, const struct LSF *inp)
+void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp)
 {
     switch(cnt)
     {

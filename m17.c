@@ -13,9 +13,9 @@
  * @param cnt Pointer to a variable holding the number of written symbols.
  * @param type Preamble type (pre-BERT or pre-LSF).
  */
-void send_preamble(float out[SYM_PER_FRA], uint32_t *cnt, const uint8_t type)
+void send_preamble(float out[SYM_PER_FRA], uint32_t *cnt, const pream_t type)
 {
-    if(type) //pre-BERT
+    if(type==PREAM_BERT) //pre-BERT
     {
         for(uint16_t i=0; i<SYM_PER_FRA/2; i++) //40ms * 4800 = 192
         {
@@ -23,7 +23,7 @@ void send_preamble(float out[SYM_PER_FRA], uint32_t *cnt, const uint8_t type)
             out[(*cnt)++]=+3.0;
         }
     }
-    else //pre-LSF
+    else// if(type==PREAM_LSF) //pre-LSF
     {
         for(uint16_t i=0; i<SYM_PER_FRA/2; i++) //40ms * 4800 = 192
         {
@@ -76,4 +76,47 @@ void send_eot(float out[SYM_PER_FRA], uint32_t *cnt)
     {
         out[(*cnt)++]=eot_symbols[i%8];
     }
+}
+
+/**
+ * @brief Generate frame symbols.
+ * 
+ * @param out Output buffer for symbols (192 symbols).
+ * @param data Payload (16 or 25 bytes).
+ * @param type Frame type (LSF, Stream, Packet).
+ * @param lsf Pointer to a structure holding Link Setup Frame data.
+ * @param lich_cnt LICH counter (0..5).
+ * @param fn Frame number.
+ */
+void send_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn)
+{
+    uint8_t lich[6];                    //48 bits packed raw, unencoded LICH
+    uint8_t lich_encoded[12];           //96 bits packed, encoded LICH
+    uint8_t enc_bits[SYM_PER_PLD*2];    //type-2 bits, unpacked
+    uint8_t rf_bits[SYM_PER_PLD*2];     //type-4 bits, unpacked
+    uint32_t sym_cnt=0;                 //symbols written counter
+
+    if(type==FRAME_LSF)
+    {
+        send_syncword(out, &sym_cnt, SYNC_LSF);
+        conv_encode_LSF(enc_bits, lsf);
+    }
+    else if(type==FRAME_STR)
+    {
+        send_syncword(out, &sym_cnt, SYNC_STR);
+        extract_LICH(lich, lich_cnt, lsf);
+        encode_LICH(lich_encoded, lich);
+        unpack_LICH(enc_bits, lich_encoded);
+        conv_encode_stream_frame(&enc_bits[96], data, fn); //stream frames require 16-byte payloads
+    }
+    else if(type==FRAME_PKT)
+    {
+        send_syncword(out, &sym_cnt, SYNC_PKT);
+        conv_encode_packet_frame(enc_bits, data); //packet frames require 25-byte payloads (chunks)
+    }
+
+    //common stuff
+    reorder_bits(rf_bits, enc_bits);
+    randomize_bits(rf_bits);
+    send_data(out, &sym_cnt, rf_bits);
 }

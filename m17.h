@@ -21,11 +21,6 @@ extern "C" {
 #define SYM_PER_FRA         192                     //symbols per whole 40 ms frame
 #define RRC_DEV             7168.0f                 //.rrc file deviation for +1.0 symbol
 
-void send_preamble(float out[SYM_PER_FRA], uint32_t *cnt, const uint8_t type);
-void send_syncword(float out[SYM_PER_SWD], uint32_t *cnt, const uint16_t syncword);
-void send_data(float out[SYM_PER_PLD], uint32_t *cnt, const uint8_t* in);
-void send_eot(float out[SYM_PER_FRA], uint32_t *cnt);
-
 // M17 C library - lib/payload/call.c
 #define CHAR_MAP " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/."
 
@@ -34,19 +29,46 @@ void decode_callsign_value(uint8_t *outp, const uint64_t inp);
 int8_t encode_callsign_bytes(uint8_t out[6], const uint8_t *inp);
 int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp);
 
+// M17 C library - preamble
+/**
+ * @brief Preamble type (0 for LSF, 1 for BERT).
+ */
+typedef enum
+{
+	PREAM_LSF,
+	PREAM_BERT
+} pream_t;
+
+// M17 C library - frame type
+/**
+ * @brief Frame type (0 - LSF, 1 - stream, 2 - packet).
+ */
+typedef enum
+{
+	FRAME_LSF,
+	FRAME_STR,
+	FRAME_PKT
+} frame_t;
+
 // M17 C library - payload
 /**
  * @brief Structure holding Link Setup Frame data.
- *
  */
-struct LSF
+typedef struct
 {
 	uint8_t dst[6];
 	uint8_t src[6];
 	uint8_t type[2];
 	uint8_t meta[112/8];
 	uint8_t crc[2];
-};
+} lsf_t;
+
+// M17 C library - high level functions
+void send_preamble(float out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
+void send_syncword(float out[SYM_PER_SWD], uint32_t* cnt, const uint16_t syncword);
+void send_data(float out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
+void send_eot(float out[SYM_PER_FRA], uint32_t* cnt);
+void send_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
 
 // M17 C library - lib/encode/convol.c
 extern const uint8_t puncture_pattern_1[61];
@@ -55,18 +77,18 @@ extern const uint8_t puncture_pattern_3[8];
 
 void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, const uint16_t fn);
 void conv_encode_packet_frame(uint8_t* out, const uint8_t* in);
-void conv_encode_LSF(uint8_t* out, const struct LSF *in);
+void conv_encode_LSF(uint8_t* out, const lsf_t* in);
 
 // M17 C library - lib/payload/crc.c
 //M17 CRC polynomial
 extern const uint16_t M17_CRC_POLY;
 
-uint16_t CRC_M17(const uint8_t *in, const uint16_t len);
-uint16_t LSF_CRC(const struct LSF *in);
+uint16_t CRC_M17(const uint8_t* in, const uint16_t len);
+uint16_t LSF_CRC(const lsf_t* in);
 
 // M17 C library - lib/payload/lich.c
-void extract_LICH(uint8_t outp[6], const uint8_t cnt, const struct LSF *inp);
-void unpack_LICH(uint8_t *out, const uint8_t in[12]);
+void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp);
+void unpack_LICH(uint8_t* out, const uint8_t in[12]);
 
 // M17 C library - lib/math/golay.c
 extern const uint16_t encode_matrix[12];

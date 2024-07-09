@@ -20,7 +20,7 @@ const uint16_t M17_CRC_POLY = 0x5935;
  * @param len Input's length.
  * @return uint16_t CRC value.
  */
-uint16_t CRC_M17(const uint8_t *in, const uint16_t len)
+uint16_t CRC_M17(const uint8_t* in, const uint16_t len)
 {
 	uint32_t crc=0xFFFF; //init val
 
@@ -44,7 +44,7 @@ uint16_t CRC_M17(const uint8_t *in, const uint16_t len)
  * @param in Pointer to an LSF struct.
  * @return uint16_t CRC value.
  */
-uint16_t LSF_CRC(const struct LSF *in)
+uint16_t LSF_CRC(const lsf_t* in)
 {
     uint8_t d[28];
 

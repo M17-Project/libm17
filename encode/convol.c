@@ -142,7 +142,7 @@ void conv_encode_packet_frame(uint8_t* out, const uint8_t* in)
  * @param out Output array, unpacked.
  * @param in Input - pointer to a struct holding the Link Setup Frame.
  */
-void conv_encode_LSF(uint8_t* out, const struct LSF *in)
+void conv_encode_LSF(uint8_t* out, const lsf_t* in)
 {
 	uint8_t pp_len = sizeof(puncture_pattern_1);
 	uint8_t p=0;			//puncturing pattern index
