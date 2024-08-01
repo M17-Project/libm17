@@ -56,7 +56,7 @@ if ( BUILD_STATIC_LIB )
  add_library(m17-static STATIC ${libm17_SOURCES})
  target_include_directories(m17-static PUBLIC
   $<INSTALL_INTERFACE:include>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
  )
  set_target_properties(m17-static PROPERTIES OUTPUT_NAME m17)
  target_link_libraries(m17-static PUBLIC -lm)
@@ -67,7 +67,7 @@ if (BUILD_SHARED_LIB )
  add_library(libm17 SHARED ${libm17_SOURCES})
  target_include_directories(libm17 PUBLIC
   $<INSTALL_INTERFACE:include>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
  )
  set_target_properties(libm17 PROPERTIES
     MACOSX_RPATH TRUE
