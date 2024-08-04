@@ -112,7 +112,7 @@ void send_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type,
     else if(type==FRAME_PKT)
     {
         send_syncword(out, &sym_cnt, SYNC_PKT);
-        conv_encode_packet_frame(enc_bits, data); //packet frames require 25-byte payloads (chunks)
+        conv_encode_packet_frame(enc_bits, data); //packet frames require 200-bit payload chunks plus a 6-bit counter
     }
 
     //common stuff
