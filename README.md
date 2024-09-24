@@ -23,5 +23,4 @@ Unit tests are available and can be run with `make test && make testrun`.
 `cmake --build build --target test`<br>
 `ctest --test-dir build`<br>
 `./build/unti_tests/unit_tests`
-
 4. Finally, installation is just `cmake --install build`
