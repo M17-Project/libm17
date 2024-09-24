@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 29 December 2023
+// M17 Project, 24 September 2024
 //--------------------------------------------------------------------
 #pragma once
 
@@ -22,7 +22,9 @@ extern "C" {
 #define RRC_DEV             7168.0f                 //.rrc file deviation for +1.0 symbol
 
 // M17 C library - lib/payload/call.c
-#define CHAR_MAP " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/."
+#define CHAR_MAP	" ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/."
+#define U40_9		(262144000000000UL)	//40^9
+#define U40_9_8		(268697600000000UL) //40^9+40^8
 
 void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6]);
 void decode_callsign_value(uint8_t *outp, const uint64_t inp);
