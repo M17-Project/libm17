@@ -11,15 +11,17 @@ Written in C, it has all the components described by the protocol's specificatio
 There's no support for **any** encryption.
 
 ### Legacy Makefile building
-First, build the shared object `libm17.so` by running `make`.
-Then, you can install the library object with `make install`.
+1. Build the shared object `libm17.so` by running `make`.<br>
+2. You can install the library object with `make install`.
+
 Unit tests are available and can be run with `make test && make testrun`.
 
 ### Cmake building
-First, configre the build. Do `cmake -B build` to get default options.
-The build the library by running `cmake --build build`.
-At this point tests can be run by doing any of:
-`cmake --build build --target test`
-`ctest --test-dir build`
+1. Configre the build - run `cmake -B build` to get default options.<br>
+2. Build the library by running `cmake --build build`.<br>
+3. At this point tests can be run by doing any of:<br>
+`cmake --build build --target test`<br>
+`ctest --test-dir build`<br>
 `./build/unti_tests/unit_tests`
-Finally, installation is just `cmake --install build`
+
+4. Finally, installation is just `cmake --install build`
