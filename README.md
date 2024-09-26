@@ -10,6 +10,9 @@ Written in C, it has all the components described by the protocol's specificatio
 
 There's no support for **any** encryption.
 
+### Address encoding convention
+As per the [specification document](https://github.com/M17-Project/M17_spec), the address space is divided into parts. Encodable callsign space is accessed by using the base40 alphabet. If the first character is set to `#`, the address belongs to the extended hash-address space. The broadcast address is represented by `@ALL`. Zero-address is invalid and decodes into a null-string. The reserved chunk for application use cannot be accessed using any string.
+
 ### Legacy Makefile building
 1. Build the shared object `libm17.so` by running `make`.<br>
 2. You can install the library object with `make install`.
