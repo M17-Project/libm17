@@ -25,9 +25,9 @@ void decode_callsign_value(uint8_t *outp, const uint64_t inp)
 	//address range check
 	if(encoded>=U40_9)
 	{
-        if(encoded==0xFFFFFFFFFFFF) //"#ALL" special address
+        if(encoded==0xFFFFFFFFFFFF) //broadcast special address
         {
-            sprintf((char*)outp, "#ALL");
+            sprintf((char*)outp, "@ALL");
             return;
         }
         else if(encoded<=U40_9_8) //#-address range
@@ -89,7 +89,7 @@ int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp)
     uint8_t start=0; //where's the first char of the address? this excludes the leading #, if present
 
     //a special address that's encoded differently
-    if(strcmp((const char*)inp, "#ALL")==0)
+    if(strcmp((const char*)inp, "@ALL")==0)
     {
         *out=0xFFFFFFFFFFFF;
         return 0;
