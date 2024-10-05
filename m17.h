@@ -152,8 +152,7 @@ extern const uint16_t SYNC_BER;
 extern const uint16_t EOT_MRKR;
 
 // M17 C library - lib/decode/viterbi.c
-#define K			        5                       //constraint length
-#define NUM_STATES	        (1 << (K - 1))          //number of states
+#define NUM_STATES	        (1 << (5 - 1))          //number of states, constraint length K=5
 
 uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len);
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, const uint16_t in_len, const uint16_t p_len);
