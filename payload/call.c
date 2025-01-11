@@ -14,7 +14,7 @@
 /**
  * @brief Decode a 48-bit value (stored as uint64_t) into callsign string.
  * 
- * @param outp Decoded callsign string.
+ * @param outp Decoded callsign string (null-terminated). Must be at least 10 bytes long and pre-allocated by the caller.
  * @param inp Encoded value.
  */
 void decode_callsign_value(uint8_t *outp, const uint64_t inp)
@@ -56,7 +56,7 @@ void decode_callsign_value(uint8_t *outp, const uint64_t inp)
 /**
  * @brief Decode a 6-byte long array (big-endian) into callsign string.
  * 
- * @param outp Decoded callsign string.
+ * @param outp Decoded callsign string (null-terminated). Must be at least 10 bytes long and pre-allocated by the caller.
  * @param inp Pointer to a byte array holding the encoded value (big-endian).
  */
 void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6])
@@ -74,7 +74,7 @@ void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6])
  * @brief Encode callsign string into a 48-bit value, stored as uint64_t.
  * 
  * @param out Pointer to a uint64_t variable for the encoded value.
- * @param inp Callsign string.
+ * @param inp Callsign string (null-terminated). Maximum 9 characters long (excluding null terminator).
  * @return int8_t Return value, 0 -> OK.
  */
 int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp)
@@ -122,7 +122,7 @@ int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp)
  * @brief Encode callsign string and store in a 6-byte array (big-endian)
  * 
  * @param out Pointer to a byte array for the encoded value (big-endian).
- * @param inp Callsign string.
+ * @param inp Callsign string (null-terminated). Maximum 9 characters long (excluding null terminator).
  * @return int8_t Return value, 0 -> OK.
  */
 int8_t encode_callsign_bytes(uint8_t out[6], const uint8_t *inp)

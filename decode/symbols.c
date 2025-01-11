@@ -11,6 +11,3 @@
 const int8_t lsf_sync_symbols[8]={+3, +3, +3, +3, -3, -3, +3, -3};
 const int8_t str_sync_symbols[8]={-3, -3, -3, -3, +3, +3, -3, +3};
 const int8_t pkt_sync_symbols[8]={+3, -3, +3, +3, -3, -3, -3, -3};
-
-// symbol levels (RX)
-const float symbol_levels[4]={-3.0, -1.0, +1.0, +3.0};

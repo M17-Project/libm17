@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.14)
 project(libm17 LANGUAGES C VERSION 0.1
   HOMEPAGE_URL "https://m17project.org/"
   DESCRIPTION "Reference M17 C library.")

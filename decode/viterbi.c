@@ -12,10 +12,10 @@
 
 #include <m17.h>
 
-static uint32_t prevMetrics[NUM_STATES];
-static uint32_t currMetrics[NUM_STATES];
-static uint32_t prevMetricsData[NUM_STATES];
-static uint32_t currMetricsData[NUM_STATES];
+static uint32_t prevMetrics[M17_CONVOL_STATES];
+static uint32_t currMetrics[M17_CONVOL_STATES];
+static uint32_t prevMetricsData[M17_CONVOL_STATES];
+static uint32_t currMetricsData[M17_CONVOL_STATES];
 static uint16_t viterbi_history[244];
 
 /**
@@ -98,17 +98,17 @@ void viterbi_decode_bit(uint16_t s0, uint16_t s1, const size_t pos)
     static const uint16_t COST_TABLE_0[] = {0, 0, 0, 0, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
     static const uint16_t COST_TABLE_1[] = {0, 0xFFFF, 0xFFFF, 0, 0, 0xFFFF, 0xFFFF, 0};
 
-    for(uint8_t i = 0; i < NUM_STATES/2; i++)
+    for(uint8_t i = 0; i < M17_CONVOL_STATES/2; i++)
     {
         uint32_t metric = q_abs_diff(COST_TABLE_0[i], s0)
                         + q_abs_diff(COST_TABLE_1[i], s1);
 
 
         uint32_t m0 = prevMetrics[i] + metric;
-        uint32_t m1 = prevMetrics[i + NUM_STATES/2] + (0x1FFFE - metric);
+        uint32_t m1 = prevMetrics[i + M17_CONVOL_STATES/2] + (0x1FFFE - metric);
 
         uint32_t m2 = prevMetrics[i] + (0x1FFFE - metric);
-        uint32_t m3 = prevMetrics[i + NUM_STATES/2] + metric;
+        uint32_t m3 = prevMetrics[i + M17_CONVOL_STATES/2] + metric;
 
         uint8_t i0 = 2 * i;
         uint8_t i1 = i0 + 1;
@@ -137,12 +137,12 @@ void viterbi_decode_bit(uint16_t s0, uint16_t s1, const size_t pos)
     }
 
     //swap
-    uint32_t tmp[NUM_STATES];
-    for(uint8_t i=0; i<NUM_STATES; i++)
+    uint32_t tmp[M17_CONVOL_STATES];
+    for(uint8_t i=0; i<M17_CONVOL_STATES; i++)
     {
     	tmp[i]=currMetrics[i];
 	}
-	for(uint8_t i=0; i<NUM_STATES; i++)
+	for(uint8_t i=0; i<M17_CONVOL_STATES; i++)
     {
     	currMetrics[i]=prevMetrics[i];
     	prevMetrics[i]=tmp[i];
@@ -179,7 +179,7 @@ uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len)
 
     uint32_t cost = prevMetrics[0];
 
-    for(size_t i = 0; i < NUM_STATES; i++)
+    for(size_t i = 0; i < M17_CONVOL_STATES; i++)
     {
         uint32_t m = prevMetrics[i];
         if(m < cost) cost = m;
@@ -195,8 +195,8 @@ uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len)
 void viterbi_reset(void)
 {
 	memset((uint8_t*)viterbi_history, 0, 2*244);
-	memset((uint8_t*)currMetrics, 0, 4*NUM_STATES);
-    memset((uint8_t*)prevMetrics, 0, 4*NUM_STATES);
-    memset((uint8_t*)currMetricsData, 0, 4*NUM_STATES);
-    memset((uint8_t*)prevMetricsData, 0, 4*NUM_STATES);
+	memset((uint8_t*)currMetrics, 0, 4*M17_CONVOL_STATES);
+    memset((uint8_t*)prevMetrics, 0, 4*M17_CONVOL_STATES);
+    memset((uint8_t*)currMetricsData, 0, 4*M17_CONVOL_STATES);
+    memset((uint8_t*)prevMetricsData, 0, 4*M17_CONVOL_STATES);
 }

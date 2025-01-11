@@ -10,6 +10,9 @@
 #include <string.h>
 #include <m17.h>
 
+/**
+ * @brief P_1 puncture pattern for Link Setup Frames (LSF).
+ */
 const uint8_t puncture_pattern_1[61] = {
     1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,
       1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,
@@ -17,13 +20,20 @@ const uint8_t puncture_pattern_1[61] = {
       1,0,1,1,1,0,1,1,1,0,1,1
 };
 
+/**
+ * @brief P_2 puncture pattern for stream frames (excluding Link Information Channel - LICH).
+ */
 const uint8_t puncture_pattern_2[12]={1,1,1,1,1,1,1,1,1,1,1,0};
+
+/**
+ * @brief P_3 puncture pattern for packet frames.
+ */
 const uint8_t puncture_pattern_3[8]={1,1,1,1,1,1,1,0};
 
 /**
  * @brief Encode M17 stream frame using convolutional encoder with puncturing.
  *
- * @param out Output array, unpacked.
+ * @param out Output - unpacked array of bits, 272 type-3 bits.
  * @param in Input - packed array of uint8_t, 144 type-1 bits.
  * @param fn Input - 16-bit frame number.
  */
@@ -84,10 +94,11 @@ void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, const uint16_t fn
 /**
  * @brief Encode M17 packet frame using convolutional encoder with puncturing.
  *
- * @param out Output array, unpacked.
- * @param in Input - packed array of uint8_t, 206 type-1 bits.
+ * @param out Output - unpacked array of bits, 368 type-3 bits.
+ * @param in Input - packed array of uint8_t, 206 type-1 bits
+ *   (200 bits of data, 1 bit End of Frame indicator, 5 bits frame/byte counter).
  */
-void conv_encode_packet_frame(uint8_t* out, const uint8_t* in)
+void conv_encode_packet_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[26])
 {
 	uint8_t pp_len = sizeof(puncture_pattern_3);
 	uint8_t p=0;			//puncturing pattern index

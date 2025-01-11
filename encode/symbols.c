@@ -13,4 +13,4 @@ const int8_t symbol_map[4]={+1, +3, -1, -3};
 const int8_t symbol_list[4]={-3, -1, +1, +3};
 
 //End of Transmission symbol pattern
-const float eot_symbols[8]={+3, +3, +3, +3, +3, +3, -3, +3};
+const int8_t eot_symbols[8]={+3, +3, +3, +3, +3, +3, -3, +3};
