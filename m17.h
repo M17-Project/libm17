@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 24 September 2024
+// M17 Foundation, 11 January 2025
 //--------------------------------------------------------------------
 #pragma once
 
@@ -113,6 +113,10 @@ uint16_t LSF_CRC(const lsf_t* in);
 // M17 C library - lib/payload/lich.c
 void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp);
 void unpack_LICH(uint8_t* out, const uint8_t in[12]);
+
+// M17 C library - lib/payload/lsf.c
+void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14]);
+void set_LSF_meta(lsf_t *lsf, uint8_t meta[14]);
 
 // M17 C library - lib/math/golay.c
 extern const uint16_t encode_matrix[12];
