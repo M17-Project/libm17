@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 11 January 2025
+// M17 Foundation, 22 January 2025
 //--------------------------------------------------------------------
 #pragma once
 
@@ -11,6 +11,8 @@ extern "C" {
 #endif
 #include <stdint.h>
 #include <stddef.h>
+
+#define LIBM17_VERSION		"1.0.0"
 
 // M17 C library - lib/lib.c
 #define BSB_SPS             10                      //samples per symbol
@@ -88,11 +90,16 @@ typedef struct
 } lsf_t;
 
 // M17 C library - high level functions
-void send_preamble(float out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
-void send_syncword(float out[SYM_PER_SWD], uint32_t* cnt, const uint16_t syncword);
-void send_data(float out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
-void send_eot(float out[SYM_PER_FRA], uint32_t* cnt);
-void send_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
+void gen_preamble(float out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
+void gen_preamble_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
+void gen_syncword(float out[SYM_PER_SWD], uint32_t* cnt, const uint16_t syncword);
+void gen_syncword_i8(int8_t out[SYM_PER_SWD], uint32_t* cnt, const uint16_t syncword);
+void gen_data(float out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
+void gen_data_i8(int8_t out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
+void gen_eot(float out[SYM_PER_FRA], uint32_t* cnt);
+void gen_eot_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt);
+void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
+void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
 
 // M17 C library - lib/encode/convol.c
 extern const uint8_t puncture_pattern_1[61];
