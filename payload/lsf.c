@@ -11,6 +11,18 @@
 #include <m17.h>
 
 /**
+ * @brief Update LSF CRC.
+ * 
+ * @param lsf Pointer to an LSF struct.
+ */
+void update_LSF_CRC(lsf_t *lsf)
+{
+	uint16_t lsf_crc = LSF_CRC(lsf);
+	lsf->crc[0] = lsf_crc >> 8;
+	lsf->crc[1] = lsf_crc & 0xFF;
+}
+
+/**
  * @brief Fill LSF data structure.
  * 
  * @param lsf Pointer to an LSF struct.
@@ -33,9 +45,7 @@ void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14])
 	else
 		memset(lsf->meta, 0, 14);
 
-	uint16_t lsf_crc = LSF_CRC(lsf);
-	lsf->crc[0] = lsf_crc >> 8;
-	lsf->crc[1] = lsf_crc & 0xFF;
+	update_LSF_CRC(lsf);
 }
 
 /**
@@ -52,7 +62,5 @@ void set_LSF_meta(lsf_t *lsf, uint8_t meta[14])
 	else
 		memset(lsf->meta, 0, 14);
 
-	uint16_t lsf_crc = LSF_CRC(lsf);
-	lsf->crc[0] = lsf_crc >> 8;
-	lsf->crc[1] = lsf_crc & 0xFF;
+	update_LSF_CRC(lsf);
 }

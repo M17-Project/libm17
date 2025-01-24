@@ -122,6 +122,7 @@ void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp);
 void unpack_LICH(uint8_t* out, const uint8_t in[12]);
 
 // M17 C library - lib/payload/lsf.c
+void update_LSF_CRC(lsf_t *lsf);
 void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14]);
 void set_LSF_meta(lsf_t *lsf, uint8_t meta[14]);
 
