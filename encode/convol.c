@@ -235,3 +235,45 @@ void conv_encode_LSF(uint8_t* out, const lsf_t* in)
 
 	//printf("pb=%d\n", pb);
 }
+
+void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25])
+{
+	uint8_t pp_len = sizeof(puncture_pattern_2);
+	uint8_t p=0;				//puncturing pattern index
+	uint16_t pb=0;				//pushed punctured bits
+	uint8_t ud[4+197+4] = {0};	//unpacked data
+
+	// Un-packing bits
+	for(size_t i = 0; i < 197; i++)
+	{
+		size_t byte_idx = i/8;
+		size_t bit_idx = 7-(i%8);
+
+		ud[4+i] = (in[byte_idx] >> bit_idx) & 1;
+	}
+
+	//encode
+	for(size_t i=0; i<197+4; i++)
+	{
+		uint8_t G1=(ud[i+4]                +ud[i+1]+ud[i+0])%2;
+        uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
+
+		if(puncture_pattern_2[p])
+		{
+			out[pb]=G1;
+			pb++;
+		}
+
+		p++;
+		p%=pp_len;
+
+		if(puncture_pattern_2[p])
+		{
+			out[pb]=G2;
+			pb++;
+		}
+
+		p++;
+		p%=pp_len;
+	}
+}

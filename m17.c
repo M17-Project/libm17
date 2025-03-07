@@ -8,7 +8,7 @@
 
 /**
  * @brief Generate symbol stream for a preamble.
- * 
+ *
  * @param out Frame buffer (192 floats).
  * @param cnt Pointer to a variable holding the number of written symbols.
  * @param type Preamble type (pre-BERT or pre-LSF).
@@ -35,7 +35,7 @@ void send_preamble(float out[SYM_PER_FRA], uint32_t *cnt, const pream_t type)
 
 /**
  * @brief Generate symbol stream for a syncword.
- * 
+ *
  * @param out Output buffer (8 floats).
  * @param cnt Pointer to a variable holding the number of written symbols.
  * @param syncword Syncword.
@@ -51,7 +51,7 @@ void send_syncword(float out[SYM_PER_SWD], uint32_t *cnt, const uint16_t syncwor
 /**
  * @brief Generate symbol stream for frame contents (without the syncword).
  * Can be used for both LSF and data frames.
- * 
+ *
  * @param out Output buffer (184 floats).
  * @param cnt Pointer to a variable holding the number of written symbols.
  * @param in Data input - unpacked bits (1 bit per byte).
@@ -66,7 +66,7 @@ void send_data(float out[SYM_PER_PLD], uint32_t *cnt, const uint8_t* in)
 
 /**
  * @brief Generate symbol stream for the End of Transmission marker.
- * 
+ *
  * @param out Output buffer (192 floats).
  * @param cnt Pointer to a variable holding the number of written symbols.
  */
@@ -80,7 +80,7 @@ void send_eot(float out[SYM_PER_FRA], uint32_t *cnt)
 
 /**
  * @brief Generate frame symbols.
- * 
+ *
  * @param out Output buffer for symbols (192 symbols).
  * @param data Payload (16 or 25 bytes).
  * @param type Frame type (LSF, Stream, Packet).
@@ -113,6 +113,11 @@ void send_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type,
     {
         send_syncword(out, &sym_cnt, SYNC_PKT);
         conv_encode_packet_frame(enc_bits, data); //packet frames require 25-byte payloads (chunks)
+    }
+    else if(type==FRAME_BERT)
+    {
+        send_syncword(out, &sym_cnt, SYNC_BER);
+        conv_encode_bert_frame(enc_bits, data); // BERT frames require 197 BERT bits packed as 25 bytes
     }
 
     //common stuff

@@ -41,13 +41,14 @@ typedef enum
 
 // M17 C library - frame type
 /**
- * @brief Frame type (0 - LSF, 1 - stream, 2 - packet).
+ * @brief Frame type (0 - LSF, 1 - stream, 2 - packet, 3 - BERT).
  */
 typedef enum
 {
 	FRAME_LSF,
 	FRAME_STR,
-	FRAME_PKT
+	FRAME_PKT,
+	FRAME_BERT
 } frame_t;
 
 // M17 C library - payload
@@ -78,6 +79,7 @@ extern const uint8_t puncture_pattern_3[8];
 void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, const uint16_t fn);
 void conv_encode_packet_frame(uint8_t* out, const uint8_t* in);
 void conv_encode_LSF(uint8_t* out, const lsf_t* in);
+void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25]);
 
 // M17 C library - lib/payload/crc.c
 //M17 CRC polynomial
