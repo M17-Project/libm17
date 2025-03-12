@@ -2,8 +2,9 @@
 // M17 C library - m17.c
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 22 January 2025
+// M17 Foundation, 12 March 2025
 //--------------------------------------------------------------------
+#include <string.h>
 #include <m17.h>
 
 /**
@@ -186,6 +187,11 @@ void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, 
         gen_syncword(out, &sym_cnt, SYNC_PKT);
         conv_encode_packet_frame(enc_bits, data); //packet frames require 200-bit payload chunks plus a 6-bit counter
     }
+	else if(type==FRAME_BERT)
+    {
+        gen_syncword(out, &sym_cnt, SYNC_BER);
+        conv_encode_bert_frame(enc_bits, data); //BERT frames require 197 BERT bits packed as 25 bytes
+    }
 
     //common stuff
     reorder_bits(rf_bits, enc_bits);
@@ -229,9 +235,82 @@ void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t ty
         gen_syncword_i8(out, &sym_cnt, SYNC_PKT);
         conv_encode_packet_frame(enc_bits, data); //packet frames require 200-bit payload chunks plus a 6-bit counter
     }
+    else if(type==FRAME_BERT)
+    {
+        gen_syncword_i8(out, &sym_cnt, SYNC_BER);
+        conv_encode_bert_frame(enc_bits, data); //BERT frames require 197 BERT bits packed as 25 bytes
+    }
 
     //common stuff
     reorder_bits(rf_bits, enc_bits);
     randomize_bits(rf_bits);
     gen_data_i8(out, &sym_cnt, rf_bits);
+}
+
+/**
+ * @brief Decode the Link Setup Frame from a symbol stream.
+ *
+ * @param lsf Pointer to an LSF struct.
+ * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
+ * @return uint32_t Viterbi metric for the payload.
+ */
+uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
+{
+	uint8_t lsf_b[30+1];
+	uint16_t soft_bit[2*SYM_PER_PLD];
+	uint16_t d_soft_bit[2*SYM_PER_PLD];
+	uint32_t e;
+
+	slice_symbols(soft_bit, pld_symbs);
+	randomize_soft_bits(soft_bit);
+	reorder_soft_bits(d_soft_bit, soft_bit);
+
+	e = viterbi_decode_punctured(lsf_b, d_soft_bit, puncture_pattern_1, 2*SYM_PER_PLD, sizeof(puncture_pattern_1));
+
+	//copy over the data starting at byte 1 (byte 0 needs to be omitted)
+	memcpy(lsf->dst, &lsf_b[1+0], 6);		//DST field
+	memcpy(lsf->src, &lsf_b[1+6], 6);		//SRC field
+	lsf->type[0]=lsf_b[1+13];				//TYPE field
+	lsf->type[1]=lsf_b[1+12];
+	memcpy(lsf->meta, &lsf_b[1+14], 14);	//META field
+	lsf->crc[0]=lsf_b[1+29];				//CRC field
+	lsf->crc[1]=lsf_b[1+28];
+
+	return e; //return Viterbi error metric
+}
+
+/**
+ * @brief Decode a single Stream Frame from a symbol stream.
+ *
+ * @param frame_data Pointer to a 16-byte array for the decoded payload.
+ * @param lich[6] Pointer to a 6-byte array for the decoded LICH chunk.
+ * @param fn Pointer to a uint16_t variable for the Frame Number.
+ * @param lich_cnt Pointer to a uint8_t variable for the LICH Counter.
+ * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
+ * @return uint32_t Viterbi metric for the payload.
+ */
+uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[6], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD])
+{
+	uint16_t soft_bit[2*SYM_PER_PLD];
+	uint16_t d_soft_bit[2*SYM_PER_PLD];
+	uint8_t tmp_frame_data[(16+128)/8+1]; //1 byte extra for flushing
+	uint32_t e;
+
+	slice_symbols(soft_bit, pld_symbs);
+	randomize_soft_bits(soft_bit);
+	reorder_soft_bits(d_soft_bit, soft_bit);
+
+	//decode LICH
+	decode_LICH(lich, d_soft_bit);
+	*lich_cnt = lich[5]>>5;
+
+	e = viterbi_decode_punctured(tmp_frame_data, &d_soft_bit[96], puncture_pattern_2, 2*SYM_PER_PLD-96, sizeof(puncture_pattern_2));
+	
+	//shift 1 position left - get rid of the encoded flushing bits
+	for(uint8_t i=0; i<16; i++)
+		frame_data[i]=tmp_frame_data[i+2+1];
+
+	*fn = (tmp_frame_data[1]<<8)|tmp_frame_data[2];
+
+	return e;
 }

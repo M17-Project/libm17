@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 22 January 2025
+// M17 Foundation, 12 March 2025
 //--------------------------------------------------------------------
 #pragma once
 
@@ -12,7 +12,7 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 
-#define LIBM17_VERSION		"1.0.0"
+#define LIBM17_VERSION		"1.0.1"
 
 // M17 C library - lib/lib.c
 #define BSB_SPS             10                      //samples per symbol
@@ -67,13 +67,14 @@ typedef enum
 
 // M17 C library - frame type
 /**
- * @brief Frame type (0 - LSF, 1 - stream, 2 - packet).
+ * @brief Frame type (0 - LSF, 1 - stream, 2 - packet, 3 - BERT).
  */
 typedef enum
 {
 	FRAME_LSF,
 	FRAME_STR,
-	FRAME_PKT
+	FRAME_PKT,
+	FRAME_BERT
 } frame_t;
 
 // M17 C library - payload
@@ -101,6 +102,9 @@ void gen_eot_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt);
 void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
 void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
 
+uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD]);
+uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[6], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD]);
+
 // M17 C library - lib/encode/convol.c
 extern const uint8_t puncture_pattern_1[61];
 extern const uint8_t puncture_pattern_2[12];
@@ -108,7 +112,8 @@ extern const uint8_t puncture_pattern_3[8];
 
 void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, const uint16_t fn);
 void conv_encode_packet_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[26]);
-void conv_encode_LSF(uint8_t* out, const lsf_t* in);
+void conv_encode_LSF(uint8_t out[SYM_PER_PLD*2], const lsf_t* in);
+void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25]);
 
 // M17 C library - lib/payload/crc.c
 //M17 CRC polynomial

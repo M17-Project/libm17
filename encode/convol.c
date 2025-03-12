@@ -2,10 +2,11 @@
 // M17 C library - encode/convol.c
 //
 // This file contains:
-// - convolutional encoders for the LSF, stream, and packet frames
+// - convolutional encoders
+//   for the LSF, stream, packet, and BERT frames
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 29 December 2023
+// M17 Foundation, 12 March 2025
 //--------------------------------------------------------------------
 #include <string.h>
 #include <m17.h>
@@ -42,9 +43,9 @@ void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, const uint16_t fn
 	uint8_t pp_len = sizeof(puncture_pattern_2);
 	uint8_t p=0;			//puncturing pattern index
 	uint16_t pb=0;			//pushed punctured bits
-	uint8_t ud[144+4+4];	//unpacked data
+	uint8_t ud[4+144+4];	//unpacked data
 
-	memset(ud, 0, 144+4+4);
+	memset(ud, 0, sizeof(ud));
 
 	//unpack frame number
 	for(uint8_t i=0; i<16; i++)
@@ -65,7 +66,7 @@ void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, const uint16_t fn
 	for(uint8_t i=0; i<144+4; i++)
 	{
 		uint8_t G1=(ud[i+4]                +ud[i+1]+ud[i+0])%2;
-        uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
+		uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
 
 		//printf("%d%d", G1, G2);
 
@@ -103,17 +104,17 @@ void conv_encode_packet_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[26])
 	uint8_t pp_len = sizeof(puncture_pattern_3);
 	uint8_t p=0;			//puncturing pattern index
 	uint16_t pb=0;			//pushed punctured bits
-	uint8_t ud[206+4+4];	//unpacked data
+	uint8_t ud[4+206+4];	//unpacked data
 
-	memset(ud, 0, 206+4+4);
+	memset(ud, 0, sizeof(ud));
 
 	//unpack data
 	for(uint8_t i=0; i<26; i++)
 	{
 		for(uint8_t j=0; j<8; j++)
 		{
-            if(i<=24 || j<=5)
-                ud[4+i*8+j]=(in[i]>>(7-j))&1;
+			if(i<=24 || j<=5)
+				ud[4+i*8+j]=(in[i]>>(7-j))&1;
 		}
 	}
 
@@ -121,7 +122,7 @@ void conv_encode_packet_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[26])
 	for(uint8_t i=0; i<206+4; i++)
 	{
 		uint8_t G1=(ud[i+4]                +ud[i+1]+ud[i+0])%2;
-        uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
+		uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
 
 		//fprintf(stderr, "%d%d", G1, G2);
 
@@ -150,17 +151,17 @@ void conv_encode_packet_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[26])
 /**
  * @brief Encode M17 stream frame using convolutional encoder with puncturing.
  *
- * @param out Output array, unpacked.
- * @param in Input - pointer to a struct holding the Link Setup Frame.
+ * @param out Output - unpacked array of bits, 368 type-3 bits.
+ * @param in Input - pointer to a struct holding the Link Setup Data and its 16-bit CRC.
  */
-void conv_encode_LSF(uint8_t* out, const lsf_t* in)
+void conv_encode_LSF(uint8_t out[SYM_PER_PLD*2], const lsf_t* in)
 {
 	uint8_t pp_len = sizeof(puncture_pattern_1);
 	uint8_t p=0;			//puncturing pattern index
 	uint16_t pb=0;			//pushed punctured bits
-	uint8_t ud[240+4+4];	//unpacked data
+	uint8_t ud[4+240+4];	//unpacked data
 
-	memset(ud, 0, 240+4+4);
+	memset(ud, 0, sizeof(ud));
 
 	//unpack DST
 	for(uint8_t i=0; i<8; i++)
@@ -221,7 +222,7 @@ void conv_encode_LSF(uint8_t* out, const lsf_t* in)
 	for(uint8_t i=0; i<240+4; i++)
 	{
 		uint8_t G1=(ud[i+4]                +ud[i+1]+ud[i+0])%2;
-        uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
+		uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
 
 		//printf("%d%d", G1, G2);
 
@@ -245,4 +246,54 @@ void conv_encode_LSF(uint8_t* out, const lsf_t* in)
 	}
 
 	//printf("pb=%d\n", pb);
+}
+
+/**
+ * @brief Encode M17 BERT frame using convolutional encoder with puncturing.
+ *
+ * @param out Output - unpacked array of bits, 368 type-3 bits.
+ * @param in Input - packed array of uint8_t, 197 type-1 bits.
+ */
+void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25])
+{
+	uint8_t pp_len = sizeof(puncture_pattern_2);
+	uint8_t p=0;			//puncturing pattern index
+	uint16_t pb=0;			//pushed punctured bits
+	uint8_t ud[4+197+4];	//unpacked data
+
+	memset(ud, 0, sizeof(ud));
+
+	// Un-packing bits
+	for(uint8_t i=0; i<197; i++)
+	{
+		uint8_t byte_idx = i/8;
+		uint8_t bit_idx = 7-(i%8);
+
+		ud[4+i] = (in[byte_idx] >> bit_idx) & 1;
+	}
+
+	//encode
+	for(uint8_t i=0; i<197+4; i++)
+	{
+		uint8_t G1=(ud[i+4]                +ud[i+1]+ud[i+0])%2;
+		uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
+
+		if(puncture_pattern_2[p])
+		{
+			out[pb]=G1;
+			pb++;
+		}
+
+		p++;
+		p%=pp_len;
+
+		if(puncture_pattern_2[p])
+		{
+			out[pb]=G2;
+			pb++;
+		}
+
+		p++;
+		p%=pp_len;
+	}
 }

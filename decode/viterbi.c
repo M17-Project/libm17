@@ -154,7 +154,7 @@ void viterbi_decode_bit(uint16_t s0, uint16_t s1, const size_t pos)
  *
  * @param out Destination byte array for decoded data.
  * @param pos Starting position for the chainback.
- * @param len Length of the output in bits.
+ * @param len Length of the output in bits (minus K-1=4).
  * @return Minimum Viterbi cost at the end of the decode sequence.
  */
 uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len)
