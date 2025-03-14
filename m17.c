@@ -270,11 +270,11 @@ uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
 	//copy over the data starting at byte 1 (byte 0 needs to be omitted)
 	memcpy(lsf->dst, &lsf_b[1+0], 6);		//DST field
 	memcpy(lsf->src, &lsf_b[1+6], 6);		//SRC field
-	lsf->type[0]=lsf_b[1+13];				//TYPE field
-	lsf->type[1]=lsf_b[1+12];
+	lsf->type[0]=lsf_b[1+12];				//TYPE field
+	lsf->type[1]=lsf_b[1+13];
 	memcpy(lsf->meta, &lsf_b[1+14], 14);	//META field
-	lsf->crc[0]=lsf_b[1+29];				//CRC field
-	lsf->crc[1]=lsf_b[1+28];
+	lsf->crc[0]=lsf_b[1+28];				//CRC field
+	lsf->crc[1]=lsf_b[1+29];
 
 	return e; //return Viterbi error metric
 }

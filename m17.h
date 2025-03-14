@@ -12,7 +12,7 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 
-#define LIBM17_VERSION		"1.0.1"
+#define LIBM17_VERSION		"1.0.2"
 
 // M17 C library - lib/lib.c
 #define BSB_SPS             10                      //samples per symbol
