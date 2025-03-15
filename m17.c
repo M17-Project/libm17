@@ -318,13 +318,13 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[6], uint16_t* fn,
 /**
  * @brief Decode a single Packet Frame from a symbol stream.
  *
- * @param frame_data Pointer to a 26-byte array for the decoded payload.
+ * @param frame_data Pointer to a 25-byte array for the decoded payload.
  * @param eof Pointer to a uint8_t variable for the End of Frame marker.
  * @param fn Pointer to a uint8_t variable for the Frame Number.
  * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
  * @return uint32_t Viterbi metric for the payload.
  */
-uint32_t decode_pkt_frame(uint8_t frame_data[26], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD])
+uint32_t decode_pkt_frame(uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD])
 {
 	uint16_t soft_bit[2*SYM_PER_PLD];
 	uint16_t d_soft_bit[2*SYM_PER_PLD];
@@ -338,7 +338,7 @@ uint32_t decode_pkt_frame(uint8_t frame_data[26], uint8_t* eof, uint8_t* fn, con
 	e = viterbi_decode_punctured(tmp_frame_data, d_soft_bit, puncture_pattern_3, 2*SYM_PER_PLD, sizeof(puncture_pattern_3));
 	
 	//shift 1 position left - get rid of the encoded flushing bits
-	for(uint8_t i=0; i<26; i++)
+	for(uint8_t i=0; i<25; i++)
 		frame_data[i]=tmp_frame_data[i+1];
 
 	*fn = (tmp_frame_data[26]>>2)&0x1F;

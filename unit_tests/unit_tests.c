@@ -571,6 +571,23 @@ void golay_soft_decode_flipped_data_5(void)
     }
 }
 
+void pkt_encode_decode(void)
+{
+    uint8_t v_in[26], v_out[25]={0};
+    uint8_t fn, last;
+    float symbs[SYM_PER_FRA];
+
+    for(uint8_t i=0; i<26; i++)
+        v_in[i]=rand()%256;
+    v_in[25]&=0xFC;
+
+    gen_frame(symbs, v_in, FRAME_PKT, NULL, 0, 0);
+    decode_pkt_frame(v_out, &last, &fn, &symbs[8]);
+    v_out[25]=((uint16_t)last<<7)|(fn<<2);
+    
+    TEST_ASSERT_EQUAL_CHAR_ARRAY(v_in, v_out, 26);
+}
+
 int main(void)
 {
     srand(time(NULL));
@@ -609,6 +626,9 @@ int main(void)
     RUN_TEST(golay_soft_decode_corrupt_data_4_5);
     RUN_TEST(golay_soft_decode_erased_data_5);
     RUN_TEST(golay_soft_decode_flipped_data_5);
+
+    //packet frame encode-decode
+    RUN_TEST(pkt_encode_decode);
 
     return UNITY_END();
 }

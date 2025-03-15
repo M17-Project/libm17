@@ -4,3 +4,4 @@
 .vscode
 *.json
 unit_tests/unit_tests
+build
