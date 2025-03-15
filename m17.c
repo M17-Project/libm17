@@ -283,13 +283,13 @@ uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
  * @brief Decode a single Stream Frame from a symbol stream.
  *
  * @param frame_data Pointer to a 16-byte array for the decoded payload.
- * @param lich[6] Pointer to a 6-byte array for the decoded LICH chunk.
+ * @param lich Pointer to a 5-byte array for the decoded LICH data chunk.
  * @param fn Pointer to a uint16_t variable for the Frame Number.
  * @param lich_cnt Pointer to a uint8_t variable for the LICH Counter.
  * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
  * @return uint32_t Viterbi metric for the payload.
  */
-uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[6], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD])
+uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD])
 {
 	uint16_t soft_bit[2*SYM_PER_PLD];
 	uint16_t d_soft_bit[2*SYM_PER_PLD];
@@ -301,14 +301,16 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[6], uint16_t* fn,
 	reorder_soft_bits(d_soft_bit, soft_bit);
 
 	//decode LICH
-	decode_LICH(lich, d_soft_bit);
-	*lich_cnt = lich[5]>>5;
+    uint8_t tmp[6];
+	decode_LICH(tmp, d_soft_bit);
+    memcpy(lich, tmp, 5);
+
+	*lich_cnt = tmp[5]>>5;
 
 	e = viterbi_decode_punctured(tmp_frame_data, &d_soft_bit[96], puncture_pattern_2, 2*SYM_PER_PLD-96, sizeof(puncture_pattern_2));
 	
-	//shift 1 position left - get rid of the encoded flushing bits
-	for(uint8_t i=0; i<16; i++)
-		frame_data[i]=tmp_frame_data[i+2+1];
+	//shift 1+2 positions left - get rid of the encoded flushing bits and FN
+    memcpy(frame_data, &tmp_frame_data[1+2], 16);
 
 	*fn = (tmp_frame_data[1]<<8)|tmp_frame_data[2];
 
@@ -338,8 +340,7 @@ uint32_t decode_pkt_frame(uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, con
 	e = viterbi_decode_punctured(tmp_frame_data, d_soft_bit, puncture_pattern_3, 2*SYM_PER_PLD, sizeof(puncture_pattern_3));
 	
 	//shift 1 position left - get rid of the encoded flushing bits
-	for(uint8_t i=0; i<25; i++)
-		frame_data[i]=tmp_frame_data[i+1];
+    memcpy(frame_data, &tmp_frame_data[1], 25);
 
 	*fn = (tmp_frame_data[26]>>2)&0x1F;
     *eof = tmp_frame_data[26]>>7;

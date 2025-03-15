@@ -571,6 +571,47 @@ void golay_soft_decode_flipped_data_5(void)
     }
 }
 
+void lsf_encode_decode(void)
+{
+    lsf_t lsf_in, lsf_out;
+    float symbs[SYM_PER_FRA];
+
+    for(uint8_t i=0; i<sizeof(lsf_t); i++)
+        ((uint8_t*)&lsf_in)[i]=rand()%256;
+    
+    gen_frame(symbs, NULL, FRAME_LSF, &lsf_in, 0, 0);
+    decode_LSF(&lsf_out, &symbs[8]);
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(&lsf_in, &lsf_out, sizeof(lsf_t));
+}
+
+void str_encode_decode(void)
+{
+    uint8_t lich_in[5], lich_out[5];
+    uint8_t pld_in[16], pld_out[16];
+    uint8_t lich_cnt_in, lich_cnt_out;
+    uint16_t fn_in, fn_out;
+    lsf_t lsf_in, lsf_out;
+    float symbs[SYM_PER_FRA];
+
+    fn_in=rand()%0x10000U;
+    for(uint8_t i=0; i<sizeof(pld_in); i++)
+        pld_in[i]=rand()%256;
+    for(uint8_t i=0; i<sizeof(lsf_t); i++)
+        ((uint8_t*)&lsf_in)[i]=rand()%256;
+    lich_cnt_in=rand()%6;
+    for(uint8_t i=0; i<5; i++)
+        lich_in[i]=((uint8_t*)&lsf_in)[lich_cnt_in*5+i];
+
+    gen_frame(symbs, pld_in, FRAME_STR, &lsf_in, lich_cnt_in, fn_in);
+    decode_str_frame(pld_out, lich_out, &fn_out, &lich_cnt_out, &symbs[8]);
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(pld_in, pld_out, sizeof(pld_in));
+    TEST_ASSERT_EQUAL_UINT8(lich_cnt_in, lich_cnt_out);
+    TEST_ASSERT_EQUAL_UINT8(fn_in, fn_out);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(lich_in, lich_out, sizeof(lich_in));
+}
+
 void pkt_encode_decode(void)
 {
     uint8_t v_in[26], v_out[25]={0};
@@ -585,7 +626,7 @@ void pkt_encode_decode(void)
     decode_pkt_frame(v_out, &last, &fn, &symbs[8]);
     v_out[25]=((uint16_t)last<<7)|(fn<<2);
     
-    TEST_ASSERT_EQUAL_CHAR_ARRAY(v_in, v_out, 26);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(v_in, v_out, 26);
 }
 
 int main(void)
@@ -628,6 +669,8 @@ int main(void)
     RUN_TEST(golay_soft_decode_flipped_data_5);
 
     //packet frame encode-decode
+    RUN_TEST(lsf_encode_decode);
+    RUN_TEST(str_encode_decode);
     RUN_TEST(pkt_encode_decode);
 
     return UNITY_END();
