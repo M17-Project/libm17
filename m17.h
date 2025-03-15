@@ -104,7 +104,7 @@ void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t ty
 
 uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD]);
 uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[6], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD]);
-uint32_t decode_pkt_frame(uint8_t frame_data[26], uint8_t* fn, const float pld_symbs[SYM_PER_PLD]);
+uint32_t decode_pkt_frame(uint8_t frame_data[26], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD]);
 
 // M17 C library - lib/encode/convol.c
 extern const uint8_t puncture_pattern_1[61];
