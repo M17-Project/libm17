@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 12 March 2025
+// M17 Foundation, 25 March 2025
 //--------------------------------------------------------------------
 #pragma once
 
@@ -12,16 +12,12 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 
-#define LIBM17_VERSION		"1.0.5"
+#define LIBM17_VERSION		"1.0.6"
 
 // M17 C library - lib/lib.c
-#define BSB_SPS             10                      //samples per symbol
-#define FLT_SPAN            8                       //baseband RRC filter span in symbols
 #define SYM_PER_SWD         8                       //symbols per syncword
-#define SW_LEN              (BSB_SPS*SYM_PER_SWD)   //syncword detector length
 #define SYM_PER_PLD         184                     //symbols per payload in a frame
 #define SYM_PER_FRA         192                     //symbols per whole 40 ms frame
-#define RRC_DEV             7168.0f                 //.rrc file deviation for +1.0 symbol
 
 // Link Setup Frame TYPE definitions
 #define M17_TYPE_PACKET			0

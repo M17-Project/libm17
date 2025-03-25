@@ -305,14 +305,14 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn,
 	decode_LICH(tmp, d_soft_bit);
     memcpy(lich, tmp, 5);
 
-	*lich_cnt = tmp[5]>>5;
+	if(lich_cnt!=NULL) *lich_cnt = tmp[5]>>5;
 
 	e = viterbi_decode_punctured(tmp_frame_data, &d_soft_bit[96], puncture_pattern_2, 2*SYM_PER_PLD-96, sizeof(puncture_pattern_2));
 	
 	//shift 1+2 positions left - get rid of the encoded flushing bits and FN
     memcpy(frame_data, &tmp_frame_data[1+2], 16);
 
-	*fn = (tmp_frame_data[1]<<8)|tmp_frame_data[2];
+	if(fn!=NULL) *fn = (tmp_frame_data[1]<<8)|tmp_frame_data[2];
 
 	return e;
 }
@@ -342,8 +342,8 @@ uint32_t decode_pkt_frame(uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, con
 	//shift 1 position left - get rid of the encoded flushing bits
     memcpy(frame_data, &tmp_frame_data[1], 25);
 
-	*fn = (tmp_frame_data[26]>>2)&0x1F;
-    *eof = tmp_frame_data[26]>>7;
+	if(fn!=NULL) *fn = (tmp_frame_data[26]>>2)&0x1F;
+    if(eof!=NULL) *eof = tmp_frame_data[26]>>7;
 
 	return e;
 }

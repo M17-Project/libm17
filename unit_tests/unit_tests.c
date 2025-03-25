@@ -591,7 +591,7 @@ void str_encode_decode(void)
     uint8_t pld_in[16], pld_out[16];
     uint8_t lich_cnt_in, lich_cnt_out;
     uint16_t fn_in, fn_out;
-    lsf_t lsf_in, lsf_out;
+    lsf_t lsf_in;
     float symbs[SYM_PER_FRA];
 
     fn_in=rand()%0x10000U;
