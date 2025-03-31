@@ -629,6 +629,27 @@ void pkt_encode_decode(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(v_in, v_out, 26);
 }
 
+void callsign_encode_decode(void)
+{
+    uint8_t v[6], ref[6];
+
+    memset(ref, 0xFF, 6);
+    encode_callsign_bytes(v, (uint8_t*)"@ALL");
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(v, ref, 6);
+
+    //source set to "N0CALL"
+    ref[0] = 0x00;
+    ref[1] = 0x00;
+    ref[2] = 0x4B;
+    ref[3] = 0x13;
+    ref[4] = 0xD1;
+    ref[5] = 0x06;
+    encode_callsign_bytes(v, (uint8_t*)"N0CALL");
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(v, ref, 6);
+}
+
 int main(void)
 {
     srand(time(NULL));
@@ -672,6 +693,9 @@ int main(void)
     RUN_TEST(lsf_encode_decode);
     RUN_TEST(str_encode_decode);
     RUN_TEST(pkt_encode_decode);
+
+    //callsign encode/decode
+    RUN_TEST(callsign_encode_decode);
 
     return UNITY_END();
 }
