@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 25 March 2025
+// M17 Foundation, 19 April 2025
 //--------------------------------------------------------------------
 #pragma once
 
@@ -11,13 +11,14 @@ extern "C" {
 #endif
 #include <stdint.h>
 #include <stddef.h>
+#include <math.h>
 
-#define LIBM17_VERSION		"1.0.6"
+#define LIBM17_VERSION		"1.0.7"
 
-// M17 C library - lib/lib.c
-#define SYM_PER_SWD         8                       //symbols per syncword
-#define SYM_PER_PLD         184                     //symbols per payload in a frame
-#define SYM_PER_FRA         192                     //symbols per whole 40 ms frame
+// M17 C library - syncword, payload, and frame sizes in symbols
+#define SYM_PER_SWD				8		//symbols per syncword
+#define SYM_PER_PLD				184		//symbols per payload in a frame
+#define SYM_PER_FRA				192		//symbols per whole 40 ms frame
 
 // Link Setup Frame TYPE definitions
 #define M17_TYPE_PACKET			0
@@ -41,15 +42,25 @@ extern "C" {
 #define M17_TYPE_META_POSITION	(1<<5)	//GNSS position data
 #define M17_TYPE_META_EXT_CALL	(2<<5)	//Extended Callsign data
 
-// M17 C library - lib/payload/call.c
-#define CHAR_MAP	" ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/."
-#define U40_9		(262144000000000UL)	//40^9
-#define U40_9_8		(268697600000000UL) //40^9+40^8
-
-void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6]);
-void decode_callsign_value(uint8_t *outp, const uint64_t inp);
-int8_t encode_callsign_bytes(uint8_t out[6], const uint8_t *inp);
-int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp);
+// LSF META position data
+// LSF META sources
+#define M17_META_SOURCE_M17C		0
+#define M17_META_SOURCE_OPENRTX		1
+#define M17_META_SOURCE_OTHER		255
+#define M17_META_SOURCE_M17C		0
+// LSF META station types
+#define M17_META_STATION_FIXED		0
+#define M17_META_STATION_MOBILE		1
+#define M17_META_STATION_HANDHELD	2
+// LSF META flags
+#define M17_META_LAT_NORTH					(0<<0)
+#define M17_META_LAT_SOUTH					(1<<0)
+#define M17_META_LON_EAST					(0<<1)
+#define M17_META_LON_WEST					(1<<1)
+#define M17_META_ALT_DATA_INVALID			(0<<2)
+#define M17_META_ALT_DATA_VALID				(1<<2)
+#define M17_META_SPD_BEARING_INVALID		(0<<3)
+#define M17_META_SPD_BEARING_VALID			(1<<3)
 
 // M17 C library - preamble
 /**
@@ -86,7 +97,7 @@ typedef struct
 	uint8_t crc[2];
 } lsf_t;
 
-// M17 C library - high level functions
+// M17 C library - high level functions - m17.c
 void gen_preamble(float out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
 void gen_preamble_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
 void gen_syncword(float out[SYM_PER_SWD], uint32_t* cnt, const uint16_t syncword);
@@ -102,7 +113,7 @@ uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD]);
 uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD]);
 uint32_t decode_pkt_frame(uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD]);
 
-// M17 C library - lib/encode/convol.c
+// M17 C library - encode/convol.c
 extern const uint8_t puncture_pattern_1[61];
 extern const uint8_t puncture_pattern_2[12];
 extern const uint8_t puncture_pattern_3[8];
@@ -112,23 +123,35 @@ void conv_encode_packet_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[26]);
 void conv_encode_LSF(uint8_t out[SYM_PER_PLD*2], const lsf_t* in);
 void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25]);
 
-// M17 C library - lib/payload/crc.c
+// M17 C library - payload/call.c
+#define CHAR_MAP	" ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/."
+#define U40_9		(262144000000000ULL)	//40^9
+#define U40_9_8		(268697600000000ULL)	//40^9+40^8
+
+void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6]);
+void decode_callsign_value(uint8_t *outp, const uint64_t inp);
+int8_t encode_callsign_bytes(uint8_t out[6], const uint8_t *inp);
+int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp);
+
+// M17 C library - payload/crc.c
 //M17 CRC polynomial
 extern const uint16_t M17_CRC_POLY;
 
 uint16_t CRC_M17(const uint8_t* in, const uint16_t len);
 uint16_t LSF_CRC(const lsf_t* in);
 
-// M17 C library - lib/payload/lich.c
+// M17 C library - payload/lich.c
 void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp);
 void unpack_LICH(uint8_t* out, const uint8_t in[12]);
 
-// M17 C library - lib/payload/lsf.c
+// M17 C library - payload/lsf.c
 void update_LSF_CRC(lsf_t *lsf);
 void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14]);
 void set_LSF_meta(lsf_t *lsf, uint8_t meta[14]);
+void set_LSF_meta_position(lsf_t *lsf, uint8_t data_source, uint8_t station_type,
+	float lat, float lon, uint8_t flags, uint16_t altitude, uint16_t bearing, uint8_t speed);
 
-// M17 C library - lib/math/golay.c
+// M17 C library - math/golay.c
 extern const uint16_t encode_matrix[12];
 extern const uint16_t decode_matrix[12];
 
@@ -137,14 +160,14 @@ uint16_t golay24_sdecode(const uint16_t codeword[24]);
 void decode_LICH(uint8_t outp[6], const uint16_t inp[96]);
 void encode_LICH(uint8_t outp[12], const uint8_t inp[6]);
 
-// M17 C library - lib/phy/interleave.c
+// M17 C library - phy/interleave.c
 //interleaver pattern
 extern const uint16_t intrl_seq[SYM_PER_PLD*2];
 
 void reorder_bits(uint8_t outp[SYM_PER_PLD*2], const uint8_t inp[SYM_PER_PLD*2]);
 void reorder_soft_bits(uint16_t outp[SYM_PER_PLD*2], const uint16_t inp[SYM_PER_PLD*2]);
 
-// M17 C library - lib/math/math.c
+// M17 C library - math/math.c
 uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2);
 float eucl_norm(const float* in1, const int8_t* in2, const uint8_t n);
 void int_to_soft(uint16_t* out, const uint16_t in, const uint8_t len);
@@ -155,17 +178,17 @@ uint16_t soft_bit_XOR(const uint16_t a, const uint16_t b);
 uint16_t soft_bit_NOT(const uint16_t a);
 void soft_XOR(uint16_t* out, const uint16_t* a, const uint16_t* b, const uint8_t len);
 
-// M17 C library - lib/phy/randomize.c
+// M17 C library - phy/randomize.c
 //randomizing pattern
 extern const uint8_t rand_seq[46];
 
 void randomize_bits(uint8_t inp[SYM_PER_PLD*2]);
 void randomize_soft_bits(uint16_t inp[SYM_PER_PLD*2]);
 
-// M17 C library - lib/phy/slice.c
+// M17 C library - phy/slice.c
 void slice_symbols(uint16_t out[2*SYM_PER_PLD], const float inp[SYM_PER_PLD]);
 
-// M17 C library - lib/math/rrc.c
+// M17 C library - math/rrc.c
 //sample RRC filter for 48kHz sample rate
 //alpha=0.5, span=8, sps=10, gain=sqrt(sps)
 extern const float rrc_taps_10[8*10+1];
@@ -174,12 +197,12 @@ extern const float rrc_taps_10[8*10+1];
 //alpha=0.5, span=8, sps=5, gain=sqrt(sps)
 extern const float rrc_taps_5[8*5+1];
 
-// M17 C library - lib/encode/symbols.c
+// M17 C library - encode/symbols.c
 // dibits-symbols map (TX)
 extern const int8_t symbol_map[4];
 extern const int8_t symbol_list[4];
 
-// M17 C library - lib/phy/sync.c
+// M17 C library - phy/sync.c
 //syncwords
 extern const uint16_t SYNC_LSF;
 extern const uint16_t SYNC_STR;
@@ -187,7 +210,7 @@ extern const uint16_t SYNC_PKT;
 extern const uint16_t SYNC_BER;
 extern const uint16_t EOT_MRKR;
 
-// M17 C library - lib/decode/viterbi.c
+// M17 C library - decode/viterbi.c
 #define M17_CONVOL_K				5									//constraint length K=5
 #define M17_CONVOL_STATES	        (1 << (M17_CONVOL_K - 1))			//number of states of the convolutional encoder
 

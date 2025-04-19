@@ -49,7 +49,7 @@ void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14])
 }
 
 /**
- * @brief Fill LSF META field.
+ * @brief Fill LSF META field and update the CRC.
  * 
  * @param lsf Pointer to an LSF struct.
  * @param meta Pointer to a 14-byte array for META field contents.
@@ -63,4 +63,61 @@ void set_LSF_meta(lsf_t *lsf, uint8_t meta[14])
 		memset(lsf->meta, 0, 14);
 
 	update_LSF_CRC(lsf);
+}
+
+/**
+ * @brief Fill LSF META field with position data and update the CRC.
+ * @brief Hemisphere setting flags are applied automatically.
+ * 
+ * @param lsf Pointer to an LSF struct.
+ * @param data_source Data source.
+ * @param station_type Type of the transmitting station.
+ * @param lat Latitude in degrees.
+ * @param lon Longitude in degrees.
+ * @param flags Hemisphere, altitude, speed, and bearing field.
+ * @param altitude Altitude in feet (-1500..64035).
+ * @param bearing Bearing in degrees.
+ * @param speed Speed in miles per hour.
+ */
+void set_LSF_meta_position(lsf_t *lsf, uint8_t data_source, uint8_t station_type,
+	float lat, float lon, uint8_t flags, uint16_t altitude, uint16_t bearing, uint8_t speed)
+{
+	uint8_t tmp[14] = {0};
+	uint16_t v;
+
+	tmp[0] = data_source;
+	tmp[1] = station_type;
+
+	tmp[2] = fabsf(floorf(lat));
+	v = floorf((fabsf(lat)-floorf(fabsf(lat)))*65536.0f);
+	tmp[3] = v>>8;
+	tmp[4] = v&0xFF;
+
+	tmp[5] = fabsf(floorf(lon));
+	v = floorf((fabsf(lon)-floorf(fabsf(lon)))*65536.0f);
+	tmp[6] = v>>8;
+	tmp[7] = v&0xFF;
+
+	if(lat>=0.0f)
+		tmp[8] |= M17_META_LAT_NORTH;
+	else
+		tmp[8] |= M17_META_LAT_SOUTH;
+
+	if(lon>=0.0f)
+		tmp[8] |= M17_META_LON_EAST;
+	else
+		tmp[8] |= M17_META_LON_WEST;
+
+	tmp[8] |= flags;
+
+	altitude += 1500;
+	tmp[9] = altitude>>8;
+	tmp[10] = altitude&0xFF;
+
+	tmp[11] = bearing>>8;
+	tmp[12] = bearing&0xFF;
+
+	tmp[13] = speed;
+
+	set_LSF_meta(lsf, tmp);
 }
