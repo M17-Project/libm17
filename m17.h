@@ -11,9 +11,11 @@ extern "C" {
 #endif
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
+#include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.0.7"
+#define LIBM17_VERSION		"1.0.8"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -98,16 +100,16 @@ typedef struct
 } lsf_t;
 
 // M17 C library - high level functions - m17.c
-void gen_preamble(float out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
-void gen_preamble_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt, const pream_t type);
-void gen_syncword(float out[SYM_PER_SWD], uint32_t* cnt, const uint16_t syncword);
-void gen_syncword_i8(int8_t out[SYM_PER_SWD], uint32_t* cnt, const uint16_t syncword);
+void gen_preamble(float out[SYM_PER_FRA], uint32_t* cnt, pream_t type);
+void gen_preamble_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt, pream_t type);
+void gen_syncword(float out[SYM_PER_SWD], uint32_t* cnt, uint16_t syncword);
+void gen_syncword_i8(int8_t out[SYM_PER_SWD], uint32_t* cnt, uint16_t syncword);
 void gen_data(float out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
 void gen_data_i8(int8_t out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
 void gen_eot(float out[SYM_PER_FRA], uint32_t* cnt);
 void gen_eot_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt);
-void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
-void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn);
+void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
+void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
 
 uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD]);
 uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD]);
@@ -118,7 +120,7 @@ extern const uint8_t puncture_pattern_1[61];
 extern const uint8_t puncture_pattern_2[12];
 extern const uint8_t puncture_pattern_3[8];
 
-void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, const uint16_t fn);
+void conv_encode_stream_frame(uint8_t* out, const uint8_t* in, uint16_t fn);
 void conv_encode_packet_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[26]);
 void conv_encode_LSF(uint8_t out[SYM_PER_PLD*2], const lsf_t* in);
 void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25]);
@@ -129,7 +131,7 @@ void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25]);
 #define U40_9_8		(268697600000000ULL)	//40^9+40^8
 
 void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6]);
-void decode_callsign_value(uint8_t *outp, const uint64_t inp);
+void decode_callsign_value(uint8_t *outp, uint64_t inp);
 int8_t encode_callsign_bytes(uint8_t out[6], const uint8_t *inp);
 int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp);
 
@@ -137,25 +139,27 @@ int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp);
 //M17 CRC polynomial
 extern const uint16_t M17_CRC_POLY;
 
-uint16_t CRC_M17(const uint8_t* in, const uint16_t len);
+uint16_t CRC_M17(const uint8_t* in, uint16_t len);
 uint16_t LSF_CRC(const lsf_t* in);
 
 // M17 C library - payload/lich.c
-void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp);
+void extract_LICH(uint8_t outp[6], uint8_t cnt, const lsf_t* inp);
 void unpack_LICH(uint8_t* out, const uint8_t in[12]);
 
 // M17 C library - payload/lsf.c
 void update_LSF_CRC(lsf_t *lsf);
 void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14]);
-void set_LSF_meta(lsf_t *lsf, uint8_t meta[14]);
+void set_LSF_meta(lsf_t *lsf, const uint8_t meta[14]);
 void set_LSF_meta_position(lsf_t *lsf, uint8_t data_source, uint8_t station_type,
 	float lat, float lon, uint8_t flags, uint16_t altitude, uint16_t bearing, uint8_t speed);
+void set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2);
+void set_LSF_meta_nonce(lsf_t *lsf, time_t ts, const uint8_t rand[10]);
 
 // M17 C library - math/golay.c
 extern const uint16_t encode_matrix[12];
 extern const uint16_t decode_matrix[12];
 
-uint32_t golay24_encode(const uint16_t data);
+uint32_t golay24_encode(uint16_t data);
 uint16_t golay24_sdecode(const uint16_t codeword[24]);
 void decode_LICH(uint8_t outp[6], const uint16_t inp[96]);
 void encode_LICH(uint8_t outp[12], const uint8_t inp[6]);
@@ -168,15 +172,15 @@ void reorder_bits(uint8_t outp[SYM_PER_PLD*2], const uint8_t inp[SYM_PER_PLD*2])
 void reorder_soft_bits(uint16_t outp[SYM_PER_PLD*2], const uint16_t inp[SYM_PER_PLD*2]);
 
 // M17 C library - math/math.c
-uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2);
-float eucl_norm(const float* in1, const int8_t* in2, const uint8_t n);
-void int_to_soft(uint16_t* out, const uint16_t in, const uint8_t len);
-uint16_t soft_to_int(const uint16_t* in, const uint8_t len);
-uint16_t div16(const uint16_t a, const uint16_t b);
-uint16_t mul16(const uint16_t a, const uint16_t b);
-uint16_t soft_bit_XOR(const uint16_t a, const uint16_t b);
-uint16_t soft_bit_NOT(const uint16_t a);
-void soft_XOR(uint16_t* out, const uint16_t* a, const uint16_t* b, const uint8_t len);
+uint16_t q_abs_diff(uint16_t v1, uint16_t v2);
+float eucl_norm(const float* in1, const int8_t* in2, uint8_t n);
+void int_to_soft(uint16_t* out, uint16_t in, uint8_t len);
+uint16_t soft_to_int(const uint16_t* in, uint8_t len);
+uint16_t div16(uint16_t a, uint16_t b);
+uint16_t mul16(uint16_t a, uint16_t b);
+uint16_t soft_bit_XOR(uint16_t a, uint16_t b);
+uint16_t soft_bit_NOT(uint16_t a);
+void soft_XOR(uint16_t* out, const uint16_t* a, const uint16_t* b, uint8_t len);
 
 // M17 C library - phy/randomize.c
 //randomizing pattern
@@ -214,10 +218,10 @@ extern const uint16_t EOT_MRKR;
 #define M17_CONVOL_K				5									//constraint length K=5
 #define M17_CONVOL_STATES	        (1 << (M17_CONVOL_K - 1))			//number of states of the convolutional encoder
 
-uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len);
-uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, const uint16_t in_len, const uint16_t p_len);
+uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len);
+uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len);
 void viterbi_decode_bit(uint16_t s0, uint16_t s1, size_t pos);
-uint32_t viterbi_chainback(uint8_t* out, size_t pos, const uint16_t len);
+uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len);
 void viterbi_reset(void);
 
 //End of Transmission symbol pattern
