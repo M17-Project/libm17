@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.0.8"
+#define LIBM17_VERSION		"1.0.9"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -151,9 +151,11 @@ void update_LSF_CRC(lsf_t *lsf);
 void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14]);
 void set_LSF_meta(lsf_t *lsf, const uint8_t meta[14]);
 void set_LSF_meta_position(lsf_t *lsf, uint8_t data_source, uint8_t station_type,
-	float lat, float lon, uint8_t flags, uint16_t altitude, uint16_t bearing, uint8_t speed);
+	float lat, float lon, uint8_t flags, int32_t altitude, uint16_t bearing, uint8_t speed);
 void set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2);
 void set_LSF_meta_nonce(lsf_t *lsf, time_t ts, const uint8_t rand[10]);
+int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
+	float *lat, float *lon, uint8_t *flags, int32_t *altitude, uint16_t *bearing, uint8_t *speed, const lsf_t *lsf);
 
 // M17 C library - math/golay.c
 extern const uint16_t encode_matrix[12];
