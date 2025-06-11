@@ -5,3 +5,4 @@
 *.json
 unit_tests/unit_tests
 build
+version.h
