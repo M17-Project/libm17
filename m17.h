@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 11 June 2025
+// M17 Foundation, 19 April 2025
 //--------------------------------------------------------------------
 #pragma once
 
@@ -14,7 +14,8 @@ extern "C" {
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include "version.h"
+
+#define LIBM17_VERSION		"1.0.9"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
