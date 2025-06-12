@@ -7,6 +7,9 @@
 #include <string.h>
 #include <m17.h>
 
+__attribute__((visibility("default")))
+const char libm17_version[] = LIBM17_VERSION;
+
 /**
  * @brief Generate symbol stream for a preamble.
  * 
