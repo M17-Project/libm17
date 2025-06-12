@@ -691,6 +691,18 @@ void meta_position(void)
     TEST_ASSERT_EQUAL_UINT8(speed, speed_n);
 }
 
+void crc_checks(void)
+{
+    uint8_t testvec[256];
+    for(uint16_t i=0; i<256; i++)
+        testvec[i]=i;
+
+    TEST_ASSERT_EQUAL_UINT16(0xFFFF, CRC_M17((uint8_t*)"", 0));
+    TEST_ASSERT_EQUAL_UINT16(0x206E, CRC_M17((uint8_t*)"A", 1));
+    TEST_ASSERT_EQUAL_UINT16(0x772B, CRC_M17((uint8_t*)"123456789", 9));
+    TEST_ASSERT_EQUAL_UINT16(0x1C31, CRC_M17(testvec, 256));
+}
+
 int main(void)
 {
     srand(time(NULL));
@@ -740,6 +752,9 @@ int main(void)
 
     //META field encode/decode
     RUN_TEST(meta_position);
+
+    //CRC test vectors
+    RUN_TEST(crc_checks);
 
     return UNITY_END();
 }
