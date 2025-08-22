@@ -653,32 +653,29 @@ void callsign_encode_decode(void)
 void meta_position(void)
 {
     lsf_t lsf = {0};
-    int8_t retval;
+    uint8_t data_source = rand()%0x10;
+    uint8_t station_type = rand()%0x10;
+	float lat = (rand()%2? -1 : 1) * (float)(rand()%9000)/100.0f; //printf("lat = %+.2f\n", lat);
+    float lon = (rand()%2? -1 : 1) * (float)(rand()%18000)/100.0f; //printf("lon = %+.2f\n", lon);
+    uint8_t flags = rand()%0x10;
+    float altitude = (rand()%10000) * 0.5;
+    uint16_t bearing = rand()%360;
+    float speed = (rand()%1000) * 0.5;
+    float radius = rand()%128;
 
-    for(uint8_t i=0; i<14; i++)
-        ((uint8_t*)&lsf)[i] = rand()%0x100;
-
-    uint8_t data_source = M17_META_SOURCE_OPENRTX; //rand()%0x100;
-    uint8_t station_type = M17_META_STATION_FIXED; //rand()%0x100;
-	float lat = 52.75;
-    float lon = 21.25f;
-    uint8_t flags = M17_META_ALT_DATA_VALID | M17_META_SPD_BEARING_VALID /*| M17_META_LAT_SOUTH | M17_META_LON_WEST*/;
-    int32_t altitude = (rand()%0x10000)-1500;
-    uint16_t bearing = rand()%0x10000;
-    uint8_t speed = rand()%0x100;
-
-    set_LSF_meta_position(&lsf, data_source, station_type, lat, lon, flags, altitude, bearing, speed);
+    set_LSF_meta_position(&lsf, data_source, station_type, lat, lon, flags, altitude, bearing, speed, radius);
 
     uint8_t data_source_n = 0;
     uint8_t station_type_n = 0;
 	float lat_n = 0.0f;
     float lon_n = 0.0f;
     uint8_t flags_n = 0;
-    int32_t altitude_n = 0;
+    float altitude_n = 0;
     uint16_t bearing_n = 0;
-    uint8_t speed_n = 0;
+    float speed_n = 0;
+    float radius_n = 0;
 
-    retval = get_LSF_meta_position(&data_source_n, &station_type_n, &lat_n, &lon_n, &flags_n, &altitude_n, &bearing_n, &speed_n, &lsf);
+    int retval = get_LSF_meta_position(&data_source_n, &station_type_n, &lat_n, &lon_n, &flags_n, &altitude_n, &bearing_n, &speed_n, &radius_n, &lsf);
 
     TEST_ASSERT_EQUAL_INT8(0, retval);
     TEST_ASSERT_EQUAL_UINT8(data_source, data_source_n);
@@ -686,9 +683,10 @@ void meta_position(void)
     TEST_ASSERT_EQUAL_FLOAT(lat, lat_n);
     TEST_ASSERT_EQUAL_FLOAT(lon, lon_n);
     TEST_ASSERT_EQUAL_UINT8(flags, flags_n);
-    TEST_ASSERT_EQUAL_INT32(altitude, altitude_n);
+    TEST_ASSERT_EQUAL_FLOAT(altitude, altitude_n);
     TEST_ASSERT_EQUAL_UINT16(bearing, bearing_n);
-    TEST_ASSERT_EQUAL_UINT8(speed, speed_n);
+    TEST_ASSERT_EQUAL_FLOAT(speed, speed_n);
+    TEST_ASSERT_EQUAL_FLOAT(powf(2.0f, ceil(log2f(radius))), radius_n);
 }
 
 void crc_checks(void)

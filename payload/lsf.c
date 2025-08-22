@@ -5,7 +5,7 @@
 // - Link Setup Frame related functions
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 20 April 2025
+// M17 Foundation, 22 August 2025
 //--------------------------------------------------------------------
 #include <m17.h>
 
@@ -66,66 +66,58 @@ void set_LSF_meta(lsf_t *lsf, const uint8_t meta[14])
 
 /**
  * @brief Fill the LSF META field with position data and update the CRC.
- * @brief Hemisphere setting flags are applied automatically.
  * 
  * @param lsf Pointer to an LSF struct.
  * @param data_source Data source.
  * @param station_type Type of the transmitting station.
  * @param lat Latitude in degrees.
  * @param lon Longitude in degrees.
- * @param flags Hemisphere, altitude, speed, and bearing field.
- * @param altitude Altitude in feet (-1500..64035).
+ * @param validity Data validity field.
+ * @param altitude Altitude in meters.
  * @param bearing Bearing in degrees.
- * @param speed Speed in miles per hour.
+ * @param speed Speed in kilometers per hour.
+ * @param radius Position uncertainty in meters.
+ * 
  */
 void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t station_type,
-	const float lat, const float lon, const uint8_t flags, const int32_t altitude, const uint16_t bearing, const uint8_t speed)
+	const float lat, const float lon, const uint8_t validity, const float altitude, const uint16_t bearing, const float speed, float radius)
 {
 	uint8_t tmp[14] = {0};
-	uint16_t v;
 
-	tmp[0] = data_source;
-	tmp[1] = station_type;
+	tmp[0] = (data_source<<4) | station_type;
 
-	tmp[2] = fabsf(floorf(lat));
-	if(signbit(lat)!=0)
-		tmp[2] -= 1;
-	v = floorf((fabsf(lat)-floorf(fabsf(lat)))*65536.0f);
-	tmp[3] = v>>8;
-	tmp[4] = v&0xFF;
-
-	tmp[5] = fabsf(floorf(lon));
-	if(signbit(lon)!=0)
-		tmp[5] -= 1;
-	v = floorf((fabsf(lon)-floorf(fabsf(lon)))*65536.0f);
-	tmp[6] = v>>8;
-	tmp[7] = v&0xFF;
-
-	if(lat>=0.0f)
-		tmp[8] |= M17_META_LAT_NORTH;
+    tmp[1] |= validity<<4;								//gnss data validity field
+	uint8_t log_r;
+	if(radius==0)
+		log_r = 0;
 	else
-		tmp[8] |= M17_META_LAT_SOUTH;
+		log_r = (uint8_t)M17_MAX(ceilf(log2f(radius)), 0);
+	log_r = (log_r>7) ? 7 : log_r;						//limit log2(r) to 7
+    tmp[1] |= log_r<<1;									//log2 radius
+    tmp[1] |= (bearing>>8)&1;							//bearing MSB
 
-	if(lon>=0.0f)
-		tmp[8] |= M17_META_LON_EAST;
-	else
-		tmp[8] |= M17_META_LON_WEST;
+    tmp[2] = bearing&0xFF;								//bearing LSB
 
-	tmp[8] |= flags;
+    int32_t lat_tmp, lon_tmp;							//lat, lon
+    lat_tmp = lat/90.0f * 8388607.0f;
+	lon_tmp = lon/180.0f * 8388607.0f;
 
-	if(altitude <= -1500)
-		v = 0;
-	else if(altitude >= (0x10000-1500))
-		v = 0xFFFF;
-	else
-		v = altitude + 1500;
-	tmp[9] = v>>8;
-	tmp[10] = v&0xFF;
+	for(uint8_t i=0; i<3; i++)
+	{
+        tmp[3+i] = *((uint8_t*)&lat_tmp+2-i);
+        tmp[6+i] = *((uint8_t*)&lon_tmp+2-i);
+    }
 
-	tmp[11] = bearing>>8;
-	tmp[12] = bearing&0xFF;
+    uint16_t alt = roundf((500.0f + altitude)*2.0f);	//altitude
+	tmp[9] = alt>>8;
+    tmp[10] = alt&0xFF;
 
-	tmp[13] = speed;
+    uint16_t spd = roundf(speed*2.0f);					//speed
+	tmp[11] = spd>>4;
+    tmp[12] = (spd&0xFF)<<4;
+
+    tmp[12] &= ~((uint8_t)0x0F);						//reserved
+    tmp[13] = 0;
 
 	set_LSF_meta(lsf, tmp);
 }
@@ -176,71 +168,59 @@ void set_LSF_meta_nonce(lsf_t *lsf, const time_t ts, const uint8_t rand[10])
  * @param station_type Type of the transmitting station.
  * @param lat Latitude in degrees.
  * @param lon Longitude in degrees.
- * @param flags Hemisphere, altitude, speed, and bearing field.
- * @param altitude Altitude in feet (-1500..64035).
+ * @param validity Data validity field.
+ * @param altitude Altitude in meters.
  * @param bearing Bearing in degrees.
- * @param speed Speed in miles per hour.
+ * @param speed Speed in kilometers per hour.
+ * @param radius Position uncertainty in meters.
  * @param lsf Pointer to an LSF struct.
  * @return 0 if CRC is valid, -1 otherwise.
  */
 int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
-	float *lat, float *lon, uint8_t *flags, int32_t *altitude, uint16_t *bearing, uint8_t *speed, const lsf_t *lsf)
+	float *lat, float *lon, uint8_t *validity, float *altitude, uint16_t *bearing, float *speed, float *radius, const lsf_t *lsf)
 {
 	if(CRC_M17((uint8_t*)lsf, sizeof(*lsf)))
 		return -1;
 
 	uint8_t tmp[14];
-
 	memcpy(tmp, lsf->meta, 14);
 
-	if(data_source!=NULL) *data_source=tmp[0];
-	if(station_type!=NULL) *station_type=tmp[1];
+	if(data_source!=NULL) *data_source = (tmp[0]&0xF0)>>4;
+	if(station_type!=NULL) *station_type = tmp[0]&0x0F;
+
+	if(validity!=NULL) *validity = (tmp[1]&0xF0)>>4;
+
+	if(radius!=NULL) *radius = powf(2.0f, (tmp[1]>>1)&0x7);
+
+	if(bearing!=NULL) *bearing = ((((uint16_t)tmp[1])&1)<<8)+tmp[2];
 
 	if(lat!=NULL)
 	{
-		*lat = 0.0f;
+		int32_t v;
 
-		if(tmp[8] & M17_META_LAT_SOUTH)
-		{
-			*lat = -tmp[2];
-			*lat -= (((uint16_t)tmp[3]<<8)+tmp[4])/65536.0f;
-		}
-		else
-		{
-			*lat = tmp[2];
-			*lat += (((uint16_t)tmp[3]<<8)+tmp[4])/65536.0f;
-		}
+		for(uint8_t i=0; i<3; i++)
+			*((uint8_t*)&v+2-i) = tmp[3+i];
+		
+		*((uint8_t*)&v+3) = (tmp[3]&0x80) ? 0xFF : 0x00; //sign extension
+
+		*lat = v/8388607.0f * 90.0f;
 	}
 
 	if(lon!=NULL)
 	{
-		*lon = 0.0f;
+		int32_t v;
 
-		if(tmp[8] & M17_META_LON_WEST)
-		{
-			*lon = -tmp[5];
-			*lon -= (((uint16_t)tmp[6]<<8)+tmp[7])/65536.0f;
-		}
-		else
-		{
-			*lon = tmp[5];
-			*lon += (((uint16_t)tmp[6]<<8)+tmp[7])/65536.0f;
-		}
+		for(uint8_t i=0; i<3; i++)
+			*((uint8_t*)&v+2-i) = tmp[6+i];
+		
+		*((uint8_t*)&v+3) = (tmp[6]&0x80) ? 0xFF : 0x00; //sign extension
+
+		*lon = v/8388607.0f * 180.0f;
 	}
 
-	if(flags!=NULL) *flags = tmp[8];
+	if(altitude!=NULL) *altitude = -500.0f + ((((uint16_t)tmp[9])<<8)+tmp[10]) / 2.0f;
 
-	if(altitude!=NULL)
-	{
-		*altitude = (((uint16_t)tmp[9]<<8)+tmp[10]) - 1500.0f;
-	}
-
-	if(bearing!=NULL)
-	{
-		*bearing = (((uint16_t)tmp[11]<<8)+tmp[12]);
-	}
-
-	if(speed!=NULL) *speed = tmp[13];
+	if(speed!=NULL) *speed = ((((uint16_t)tmp[11])<<4)+((tmp[12]&0xF0)>>4)) / 2.0f;
 
 	return 0;
 }

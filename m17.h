@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 19 April 2025
+// M17 Foundation, 22 August 2025
 //--------------------------------------------------------------------
 #pragma once
 
@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.0.9"
+#define LIBM17_VERSION		"1.1.0"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -45,24 +45,19 @@ extern "C" {
 #define M17_TYPE_META_EXT_CALL	(2<<5)	//Extended Callsign data
 
 // LSF META position data
-// LSF META sources
-#define M17_META_SOURCE_M17C		0
-#define M17_META_SOURCE_OPENRTX		1
-#define M17_META_SOURCE_OTHER		255
-#define M17_META_SOURCE_M17C		0
-// LSF META station types
-#define M17_META_STATION_FIXED		0
-#define M17_META_STATION_MOBILE		1
-#define M17_META_STATION_HANDHELD	2
-// LSF META flags
-#define M17_META_LAT_NORTH					(0<<0)
-#define M17_META_LAT_SOUTH					(1<<0)
-#define M17_META_LON_EAST					(0<<1)
-#define M17_META_LON_WEST					(1<<1)
-#define M17_META_ALT_DATA_INVALID			(0<<2)
-#define M17_META_ALT_DATA_VALID				(1<<2)
-#define M17_META_SPD_BEARING_INVALID		(0<<3)
-#define M17_META_SPD_BEARING_VALID			(1<<3)
+// GNSS station types
+#define M17_GNSS_STATION_FIXED				((uint8_t)0)
+#define M17_GNSS_STATION_MOBILE				((uint8_t)1)
+#define M17_GNSS_STATION_HANDHELD			((uint8_t)2)
+// GNSS validity flags
+#define M17_GNSS_LAT_LON_INVALID			((uint8_t)0<<3)
+#define M17_GNSS_LAT_LON_VALID				((uint8_t)1<<3)
+#define M17_GNSS_ALT_INVALID				((uint8_t)0<<2)
+#define M17_GNSS_ALT_VALID					((uint8_t)1<<2)
+#define M17_GNSS_SPD_BEARING_INVALID		((uint8_t)0<<1)
+#define M17_GNSS_SPD_BEARING_VALID			((uint8_t)1<<1)
+#define M17_GNSS_RADIUS_INVALID				((uint8_t)0<<0)
+#define M17_GNSS_RADIUS_VALID				((uint8_t)1<<0)
 
 // M17 C library - preamble
 /**
@@ -151,11 +146,11 @@ void update_LSF_CRC(lsf_t *lsf);
 void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14]);
 void set_LSF_meta(lsf_t *lsf, const uint8_t meta[14]);
 void set_LSF_meta_position(lsf_t *lsf, uint8_t data_source, uint8_t station_type,
-	float lat, float lon, uint8_t flags, int32_t altitude, uint16_t bearing, uint8_t speed);
+	float lat, float lon, uint8_t validity, float altitude, uint16_t bearing, float speed, float radius);
 void set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2);
 void set_LSF_meta_nonce(lsf_t *lsf, time_t ts, const uint8_t rand[10]);
 int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
-	float *lat, float *lon, uint8_t *flags, int32_t *altitude, uint16_t *bearing, uint8_t *speed, const lsf_t *lsf);
+	float *lat, float *lon, uint8_t *validity, float *altitude, uint16_t *bearing, float *speed, float *radius, const lsf_t *lsf);
 
 // M17 C library - math/golay.c
 extern const uint16_t encode_matrix[12];
@@ -235,6 +230,9 @@ extern const int8_t eot_symbols[8];
 extern const int8_t lsf_sync_symbols[8];
 extern const int8_t str_sync_symbols[8];
 extern const int8_t pkt_sync_symbols[8];
+
+//max(a, b)macro
+#define M17_MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #ifdef __cplusplus
 }
