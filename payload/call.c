@@ -83,7 +83,7 @@ int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp)
     if(strlen((const char*)inp)>9)
         return -1;
 
-    const uint8_t charMap[40]=CHAR_MAP;
+    const uint8_t charMap[41]=CHAR_MAP;
 
     uint64_t tmp=0;
     uint8_t start=0; //where's the first char of the address? this excludes the leading #, if present

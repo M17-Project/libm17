@@ -28,10 +28,10 @@ uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2)
 }
 
 /**
- * @brief Calculate L2 norm between two n-dimensional vectors of floats.
+ * @brief Calculate L2 norm between two n-dimensional vectors.
  *
- * @param in1 Vector 1.
- * @param in2 Vector 2.
+ * @param in1 Vector 1 - floats.
+ * @param in2 Vector 2 - signed ints.
  * @param n Vectors' size.
  * @return float L2 norm.
  */
@@ -45,6 +45,27 @@ float eucl_norm(const float* in1, const int8_t* in2, const uint8_t n)
     }
 
     return sqrtf(tmp);
+}
+
+/**
+ * @brief Calculate squared L2 norm between two n-dimensional vectors.
+ * It is equivalent to the sum of squared differences.
+ *
+ * @param in1 Vector 1 - floats.
+ * @param in2 Vector 2 - signed ints.
+ * @param n Vectors' size.
+ * @return float Squared L2 norm.
+ */
+float sq_eucl_norm(const float* in1, const int8_t* in2, const uint8_t n)
+{
+    float tmp = 0.0f;
+
+    for(uint8_t i=0; i<n; i++)
+    {
+        tmp += (in1[i]-(float)in2[i])*(in1[i]-(float)in2[i]);
+    }
+
+    return tmp;
 }
 
 /**

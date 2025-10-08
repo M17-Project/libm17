@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.1.0"
+#define LIBM17_VERSION		"1.1.1"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -171,6 +171,7 @@ void reorder_soft_bits(uint16_t outp[SYM_PER_PLD*2], const uint16_t inp[SYM_PER_
 // M17 C library - math/math.c
 uint16_t q_abs_diff(uint16_t v1, uint16_t v2);
 float eucl_norm(const float* in1, const int8_t* in2, uint8_t n);
+float sq_eucl_norm(const float* in1, const int8_t* in2, const uint8_t n);
 void int_to_soft(uint16_t* out, uint16_t in, uint8_t len);
 uint16_t soft_to_int(const uint16_t* in, uint8_t len);
 uint16_t div16(uint16_t a, uint16_t b);
