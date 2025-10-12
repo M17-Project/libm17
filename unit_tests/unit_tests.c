@@ -614,7 +614,7 @@ void str_encode_decode(void)
 
 void pkt_encode_decode(void)
 {
-    uint8_t v_in[26], v_out[25]={0};
+    uint8_t v_in[26], v_out[26]={0};
     uint8_t fn, last;
     float symbs[SYM_PER_FRA];
 
