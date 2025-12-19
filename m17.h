@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.1.1"
+#define LIBM17_VERSION		"1.1.2"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -198,6 +198,14 @@ extern const float rrc_taps_10[8*10+1];
 //sample RRC filter for 24kHz sample rate
 //alpha=0.5, span=8, sps=5, gain=sqrt(sps)
 extern const float rrc_taps_5[8*5+1];
+
+//polyphase RRC filter taps
+//alpha=0.5, span=8, sps=10, gain=sqrt(sps)
+extern const float rrc_taps_10_poly[10*9];
+
+//polyphase RRC filter taps
+//alpha=0.5, span=8, sps=5, gain=sqrt(sps)
+extern const float rrc_taps_5_poly[5*9];
 
 // M17 C library - encode/symbols.c
 // dibits-symbols map (TX)
