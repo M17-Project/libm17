@@ -25,7 +25,7 @@ As per the [specification document](https://github.com/M17-Project/M17_spec), th
 Unit tests are available and can be run with `make test && make testrun`.
 
 ### Cmake building
-1. Configre the build - run `cmake -B build` to get default options.<br>
+1. Configure the build - run `cmake -B build` to get default options.<br>
 2. Build the library by running `cmake --build build`.<br>
 3. At this point tests can be run by doing any of:<br>
 `cmake --build build --target test`<br>
