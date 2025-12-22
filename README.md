@@ -11,7 +11,7 @@ The library includes:
 - cyclic redundancy check (CRC) calculation (for both LSF/LSD and arbitrary input),
 - callsign encoder and decoder,
 - LSF/LSD META field extended callsign data, cryptographic nonce, and GNSS position data encoders/decoders,
-- two sets of Root Raised Cosine (RRC) filter taps (for 24kHz and 48kHz sample rates).
+- Root Raised Cosine (RRC) filter taps (for 24kHz and 48kHz sample rates) - linear and polyphase.
 
 There's no support for **any** encryption within the library - it has to be handled by the developer, using own code.
 
