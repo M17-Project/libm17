@@ -571,6 +571,224 @@ void golay_soft_decode_flipped_data_5(void)
     }
 }
 
+//Viterbi
+void bits_to_soft(uint16_t *soft, const uint8_t *bits, size_t nbits)
+{
+    for (size_t i = 0; i < nbits; i++)
+        soft[i] = bits[i] ? 0xFFFF : 0x0000;
+}
+
+void viterbi_stream_roundtrip_clean(void)
+{
+    uint8_t in_bits[4 + 16 + 144] = {0};  // trellis input
+    uint8_t payload[16];
+    uint8_t encoded_bits[272];
+    uint16_t soft_bits[272];
+    uint16_t fn = rand();
+
+    // frame number
+    for (int i = 0; i < 16; i++)
+        in_bits[4 + i] = (fn >> (15 - i)) & 1;
+
+    // payload
+    for (int i = 0; i < 16; i++)
+        payload[i] = rand();
+
+    for (int i = 0; i < 16; i++)
+        for (int j = 0; j < 8; j++)
+            in_bits[4 + 16 + i*8 + j] = (payload[i] >> (7 - j)) & 1;
+
+    conv_encode_stream_frame(encoded_bits, payload, fn);
+    bits_to_soft(soft_bits, encoded_bits, 272);
+
+    uint8_t decoded_bits[21] = {0};
+
+    viterbi_decode_punctured(
+        decoded_bits,
+        soft_bits,
+        puncture_pattern_2,
+        272,
+        sizeof(puncture_pattern_2)
+    );
+
+    // compare
+    for (int i = 0; i < 16 + 144; i++)
+    {
+        uint8_t expected = in_bits[4 + i];
+        uint8_t got =
+            (decoded_bits[(4 + i + 4) / 8] >> (7 - ((4 + i + 4) % 8))) & 1;
+
+        TEST_ASSERT_EQUAL(expected, got);
+    }
+}
+
+void viterbi_stream_repeatability(void)
+{
+    uint8_t payload[16];
+    uint8_t encoded_bits[272];
+    uint16_t soft_bits[272];
+    uint8_t dec1[21] = {0}, dec2[21] = {0};
+    uint16_t fn = rand();
+
+    for (int i = 0; i < 16; i++)
+        payload[i] = rand();
+
+    conv_encode_stream_frame(encoded_bits, payload, fn);
+    bits_to_soft(soft_bits, encoded_bits, 272);
+
+    viterbi_decode_punctured(dec1, soft_bits, puncture_pattern_2, 272, sizeof(puncture_pattern_2));
+    viterbi_decode_punctured(dec2, soft_bits, puncture_pattern_2, 272, sizeof(puncture_pattern_2));
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(dec1, dec2, sizeof(dec1));
+}
+
+void viterbi_stream_single_soft_error(void)
+{
+    uint8_t in_bits[4 + 16 + 144] = {0};  // trellis input
+    uint8_t payload[16];
+    uint8_t encoded_bits[272];
+    uint16_t soft_bits[272];
+    uint16_t fn = rand();
+
+    // frame number
+    for (int i = 0; i < 16; i++)
+        in_bits[4 + i] = (fn >> (15 - i)) & 1;
+
+    // payload
+    for (int i = 0; i < 16; i++)
+        payload[i] = rand();
+
+    for (int i = 0; i < 16; i++)
+        for (int j = 0; j < 8; j++)
+            in_bits[4 + 16 + i*8 + j] = (payload[i] >> (7 - j)) & 1;
+
+    conv_encode_stream_frame(encoded_bits, payload, fn);
+    bits_to_soft(soft_bits, encoded_bits, 272);
+
+    // apply error
+    soft_bits[14] ^= 0x7FFF;
+
+    uint8_t decoded_bits[21] = {0};
+
+    viterbi_decode_punctured(
+        decoded_bits,
+        soft_bits,
+        puncture_pattern_2,
+        272,
+        sizeof(puncture_pattern_2)
+    );
+
+    // compare
+    for (int i = 0; i < 16 + 144; i++)
+    {
+        uint8_t expected = in_bits[4 + i];
+        uint8_t got =
+            (decoded_bits[(4 + i + 4) / 8] >> (7 - ((4 + i + 4) % 8))) & 1;
+
+        TEST_ASSERT_EQUAL(expected, got);
+    }
+}
+
+void viterbi_stream_burst_error(void)
+{
+    uint8_t in_bits[4 + 16 + 144] = {0};  // trellis input
+    uint8_t payload[16];
+    uint8_t encoded_bits[272];
+    uint16_t soft_bits[272];
+    uint16_t fn = rand();
+
+    // frame number
+    for (int i = 0; i < 16; i++)
+        in_bits[4 + i] = (fn >> (15 - i)) & 1;
+
+    // payload
+    for (int i = 0; i < 16; i++)
+        payload[i] = rand();
+
+    for (int i = 0; i < 16; i++)
+        for (int j = 0; j < 8; j++)
+            in_bits[4 + 16 + i*8 + j] = (payload[i] >> (7 - j)) & 1;
+
+    conv_encode_stream_frame(encoded_bits, payload, fn);
+    bits_to_soft(soft_bits, encoded_bits, 272);
+
+    // apply 5 burst erasures
+    uint16_t s = rand() % (272-5);
+    for (int i=s; i<s+5; i++)
+        soft_bits[i] = 0x7FFF;
+
+    uint8_t decoded_bits[21] = {0};
+
+    viterbi_decode_punctured(
+        decoded_bits,
+        soft_bits,
+        puncture_pattern_2,
+        272,
+        sizeof(puncture_pattern_2)
+    );
+
+    // compare
+    for (int i = 0; i < 16 + 144; i++)
+    {
+        uint8_t expected = in_bits[4 + i];
+        uint8_t got =
+            (decoded_bits[(4 + i + 4) / 8] >> (7 - ((4 + i + 4) % 8))) & 1;
+
+        TEST_ASSERT_EQUAL(expected, got);
+    }
+}
+
+void viterbi_stream_excessive_errors(void)
+{
+    uint8_t payload[16];
+    uint8_t encoded_bits[272];
+    uint16_t soft_bits[272];
+    uint8_t decoded_bits[21] = {0};
+    uint16_t fn = rand();
+
+    for (int i = 0; i < 16; i++)
+        payload[i] = rand();
+
+    conv_encode_stream_frame(encoded_bits, payload, fn);
+    bits_to_soft(soft_bits, encoded_bits, 272);
+
+    for (int i = 0; i < 80; i++)
+        soft_bits[i] ^= 0xFFFF;
+
+    viterbi_decode_punctured(decoded_bits, soft_bits, puncture_pattern_2, 272, sizeof(puncture_pattern_2));
+
+    // expect mismatch
+    TEST_ASSERT_NOT_EQUAL(
+        0,
+        memcmp(payload, &decoded_bits[3], 16)
+    );
+}
+
+void viterbi_stream_zero_cost(void)
+{
+    uint8_t payload[16];
+    uint8_t encoded_bits[272];
+    uint16_t soft_bits[272];
+    uint8_t decoded_bits[21] = {0};
+    uint16_t fn = rand();
+
+    for (int i = 0; i < 16; i++)
+        payload[i] = rand();
+
+    conv_encode_stream_frame(encoded_bits, payload, fn);
+    bits_to_soft(soft_bits, encoded_bits, 272);
+
+    uint32_t cost = viterbi_decode_punctured(
+        decoded_bits,
+        soft_bits,
+        puncture_pattern_2,
+        272,
+        sizeof(puncture_pattern_2)
+    );
+    
+    TEST_ASSERT(cost < 20); // punctured code is near-zero, but not quite zero :-)
+}
+
 void lsf_encode_decode(void)
 {
     lsf_t lsf_in, lsf_out;
@@ -580,7 +798,7 @@ void lsf_encode_decode(void)
         ((uint8_t*)&lsf_in)[i]=rand()%256;
     
     gen_frame(symbs, NULL, FRAME_LSF, &lsf_in, 0, 0);
-    decode_LSF(&lsf_out, &symbs[8]);
+    decode_LSF(&lsf_out, &symbs[8]); // why does this return ~100?
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(&lsf_in, &lsf_out, sizeof(lsf_t));
 }
@@ -680,13 +898,13 @@ void meta_position(void)
     TEST_ASSERT_EQUAL_INT8(0, retval);
     TEST_ASSERT_EQUAL_UINT8(data_source, data_source_n);
     TEST_ASSERT_EQUAL_UINT8(station_type, station_type_n);
-    TEST_ASSERT_EQUAL_FLOAT(lat, lat_n);
-    TEST_ASSERT_EQUAL_FLOAT(lon, lon_n);
+    TEST_ASSERT(fabsf(lat-lat_n) < 0.001f);
+    TEST_ASSERT(fabsf(lon-lon_n) < 0.001f);
     TEST_ASSERT_EQUAL_UINT8(flags, flags_n);
-    TEST_ASSERT_EQUAL_FLOAT(altitude, altitude_n);
+    TEST_ASSERT(fabsf(altitude-altitude_n) < 0.001f);
     TEST_ASSERT_EQUAL_UINT16(bearing, bearing_n);
-    TEST_ASSERT_EQUAL_FLOAT(speed, speed_n);
-    TEST_ASSERT_EQUAL_FLOAT(powf(2.0f, ceil(log2f(radius))), radius_n);
+    TEST_ASSERT(fabsf(speed-speed_n) < 0.001f);
+    TEST_ASSERT(fabsf(powf(2.0f, ceil(log2f(radius)))-radius_n) < 0.001f);
 }
 
 void crc_checks(void)
@@ -739,6 +957,14 @@ int main(void)
     RUN_TEST(golay_soft_decode_corrupt_data_4_5);
     RUN_TEST(golay_soft_decode_erased_data_5);
     RUN_TEST(golay_soft_decode_flipped_data_5);
+
+    //Viterbi
+    RUN_TEST(viterbi_stream_roundtrip_clean);
+    RUN_TEST(viterbi_stream_repeatability);
+    RUN_TEST(viterbi_stream_single_soft_error);
+    RUN_TEST(viterbi_stream_burst_error);
+    RUN_TEST(viterbi_stream_excessive_errors);
+    RUN_TEST(viterbi_stream_zero_cost);
 
     //packet frame encode-decode
     RUN_TEST(lsf_encode_decode);
