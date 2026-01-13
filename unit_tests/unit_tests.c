@@ -3,9 +3,59 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 #include <time.h>
 #include <unity/unity.h>
 #include <m17.h>
+
+typedef struct
+{
+    float symbol;
+    uint16_t min0;
+    uint16_t max0;
+    uint16_t min1;
+    uint16_t max1;
+} slice_expect_t;
+
+static const slice_expect_t slice_cases[] =
+{
+    /* finite boundary */
+    { +FLT_MAX,  0x0000, 0x0000,   0xFFFF, 0xFFFF },
+    { -FLT_MAX,  0xFFFF, 0xFFFF,   0xFFFF, 0xFFFF },
+
+    /* very large finite */
+    { +30.0f,    0x0000, 0x0000,   0xFFFF, 0xFFFF },
+    { -30.0f,    0xFFFF, 0xFFFF,   0xFFFF, 0xFFFF },
+
+    /* outer constellation */
+    { +3.0f,     0x0000, 0x0000,   0xFFFF, 0xFFFF },
+    { -3.0f,     0xFFFF, 0xFFFF,   0xFFFF, 0xFFFF },
+
+    /* just below saturation */
+    { +2.999f,   0x0000, 0x0000,   0xFFD8, 0xFFFF },
+    { -2.999f,   0xFFFF, 0xFFFF,   0xFFD8, 0xFFFF },
+
+    /* middle */
+    { +2.0f,     0x0000, 0x0000,   0x7FFF, 0x7FFF },
+    { -2.0f,     0xFFFF, 0xFFFF,   0x7FFF, 0x7FFF },
+
+    /* inner */
+    { +1.0f,     0x0000, 0x0000,   0x0000, 0x0000 },
+    { -1.0f,     0xFFFE, 0xFFFF,   0x0000, 0x0000 },
+
+    /* near zero */
+    { +1e-6f,    0x7FFE, 0x7FFF,   0x0000, 0x0000 },
+    { -1e-6f,    0x7FFF, 0x8000,   0x0000, 0x0000 },
+
+    /* signed zero */
+    { +0.0f,     0x7FFF, 0x7FFF,   0x0000, 0x0000 },
+    { -0.0f,     0x7FFF, 0x7FFF,   0x0000, 0x0000 },
+
+    /* float pathologies :D */
+    {  NAN,      0xFFFF, 0xFFFF,   0xFFFF, 0xFFFF },
+    { +INFINITY, 0x0000, 0x0000,   0xFFFF, 0xFFFF },
+    { -INFINITY, 0xFFFF, 0xFFFF,   0xFFFF, 0xFFFF }
+};
 
 //this is run before every test
 void setUp(void)
@@ -34,92 +84,39 @@ void soft_logic_xor(void)
     TEST_ASSERT_EQUAL(0x0000, soft_bit_XOR(0xFFFF, 0xFFFF));
 }
 
-void symbol_to_soft_dibit(uint16_t dibit[2], float symb_in)
+void fill_symbols_from_table(float *symbols)
 {
-    //bit 0
-    if(symb_in>=symbol_list[3])
-    {
-        dibit[1]=0xFFFF;
-    }
-    else if(symb_in>=symbol_list[2])
-    {
-        dibit[1]=-(float)0xFFFF/(symbol_list[3]-symbol_list[2])*symbol_list[2]+symb_in*(float)0xFFFF/(symbol_list[3]-symbol_list[2]);
-    }
-    else if(symb_in>=symbol_list[1])
-    {
-        dibit[1]=0x0000;
-    }
-    else if(symb_in>=symbol_list[0])
-    {
-        dibit[1]=(float)0xFFFF/(symbol_list[1]-symbol_list[0])*symbol_list[1]-symb_in*(float)0xFFFF/(symbol_list[1]-symbol_list[0]);
-    }
-    else
-    {
-        dibit[1]=0xFFFF;
-    }
+    const size_t n = sizeof(slice_cases) / sizeof(slice_cases[0]);
 
-    //bit 1
-    if(symb_in>=symbol_list[2])
+    for (int i = 0; i < SYM_PER_PLD; i++)
     {
-        dibit[0]=0x0000;
-    }
-    else if(symb_in>=symbol_list[1])
-    {
-        dibit[0]=0x7FFF-symb_in*(float)0xFFFF/(symbol_list[2]-symbol_list[1]);
-    }
-    else
-    {
-        dibit[0]=0xFFFF;
+        symbols[i] = slice_cases[i % n].symbol;
     }
 }
 
 void symbol_to_dibit(void)
 {
-    uint16_t dibit[2];
+    float symbols[SYM_PER_PLD];
+    uint16_t soft[2*SYM_PER_PLD];
 
-    symbol_to_soft_dibit(dibit, +30.0);
-    TEST_ASSERT_EQUAL(0x0000, dibit[0]);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[1]); //this is the LSB...
+    fill_symbols_from_table(symbols);
+    slice_symbols(soft, symbols);
 
-    symbol_to_soft_dibit(dibit, +4.0);
-    TEST_ASSERT_EQUAL(0x0000, dibit[0]);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[1]);
+    const size_t n = sizeof(slice_cases) / sizeof(slice_cases[0]);
 
-    symbol_to_soft_dibit(dibit, +3.0);
-    TEST_ASSERT_EQUAL(0x0000, dibit[0]);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[1]);
+    for (int i = 0; i < SYM_PER_PLD; i++)
+    {
+        const slice_expect_t *e = &slice_cases[i % n];
 
-    symbol_to_soft_dibit(dibit, +2.0);
-    TEST_ASSERT_EQUAL(0x0000, dibit[0]);
-    TEST_ASSERT_EQUAL(0x7FFF, dibit[1]);
+        uint16_t s0 = soft[2*i];
+        uint16_t s1 = soft[2*i + 1];
 
-    symbol_to_soft_dibit(dibit, +1.0);
-    TEST_ASSERT_EQUAL(0x0000, dibit[0]);
-    TEST_ASSERT_EQUAL(0x0000, dibit[1]);
+        TEST_ASSERT(s0 >= e->min0);
+        TEST_ASSERT(s0 <= e->max0);
 
-    symbol_to_soft_dibit(dibit, 0.0);
-    TEST_ASSERT_EQUAL(0x7FFF, dibit[0]);
-    TEST_ASSERT_EQUAL(0x0000, dibit[1]);
-
-    symbol_to_soft_dibit(dibit, -1.0);
-    TEST_ASSERT_EQUAL(0xFFFE, dibit[0]); //off by one is acceptable
-    TEST_ASSERT_EQUAL(0x0000, dibit[1]);
-
-    symbol_to_soft_dibit(dibit, -2.0);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[0]);
-    TEST_ASSERT_EQUAL(0x7FFF, dibit[1]);
-    
-    symbol_to_soft_dibit(dibit, -3.0);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[0]);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[1]);
-
-    symbol_to_soft_dibit(dibit, -4.0);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[0]);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[1]);
-
-    symbol_to_soft_dibit(dibit, -30.0);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[0]);
-    TEST_ASSERT_EQUAL(0xFFFF, dibit[1]);
+        TEST_ASSERT(s1 >= e->min1);
+        TEST_ASSERT(s1 <= e->max1);
+    }
 }
 
 /**

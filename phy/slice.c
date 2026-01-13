@@ -2,7 +2,7 @@
 // M17 C library - phy/slice.c
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 14 January 2024
+// M17 Project, 13 January 2026
 //-------------------------------
 
 #include <m17.h>
@@ -16,42 +16,51 @@
  */
 void slice_symbols(uint16_t out[2*SYM_PER_PLD], const float inp[SYM_PER_PLD])
 {
-    for(uint8_t i=0; i<SYM_PER_PLD; i++)
+    const float inv_d32 = (float)0xFFFF / (symbol_list[3] - symbol_list[2]);
+    const float inv_d21 = (float)0xFFFF / (symbol_list[2] - symbol_list[1]);
+    const float inv_d10 = (float)0xFFFF / (symbol_list[1] - symbol_list[0]);
+
+    const float c3 = -inv_d32 * symbol_list[2];
+    const float c1 =  inv_d10 * symbol_list[1];
+
+    for (uint_fast8_t i = 0; i < SYM_PER_PLD; i++)
     {
-        //bit 0
-        if(inp[i]>=symbol_list[3])
+        const float x = inp[i];
+
+        /* bit 0 (out[i*2+1]) */
+        if (x >= symbol_list[3])
         {
-            out[i*2+1]=0xFFFF;
+            out[i*2+1] = 0xFFFF;
         }
-        else if(inp[i]>=symbol_list[2])
+        else if (x >= symbol_list[2])
         {
-            out[i*2+1]=-(float)0xFFFF/(symbol_list[3]-symbol_list[2])*symbol_list[2]+inp[i]*(float)0xFFFF/(symbol_list[3]-symbol_list[2]);
+            out[i*2+1] = (uint16_t)(c3 + x * inv_d32);
         }
-        else if(inp[i]>=symbol_list[1])
+        else if (x >= symbol_list[1])
         {
-            out[i*2+1]=0x0000;
+            out[i*2+1] = 0x0000;
         }
-        else if(inp[i]>=symbol_list[0])
+        else if (x >= symbol_list[0])
         {
-            out[i*2+1]=(float)0xFFFF/(symbol_list[1]-symbol_list[0])*symbol_list[1]-inp[i]*(float)0xFFFF/(symbol_list[1]-symbol_list[0]);
+            out[i*2+1] = (uint16_t)(c1 - x * inv_d10);
         }
         else
         {
-            out[i*2+1]=0xFFFF;
+            out[i*2+1] = 0xFFFF;
         }
 
-        //bit 1
-        if(inp[i]>=symbol_list[2])
+        /* bit 1 (out[i*2]) */
+        if (x >= symbol_list[2])
         {
-            out[i*2]=0x0000;
+            out[i*2] = 0x0000;
         }
-        else if(inp[i]>=symbol_list[1])
+        else if (x >= symbol_list[1])
         {
-            out[i*2]=0x7FFF-inp[i]*(float)0xFFFF/(symbol_list[2]-symbol_list[1]);
+            out[i*2] = (uint16_t)(0x7FFF - x * inv_d21);
         }
         else
         {
-            out[i*2]=0xFFFF;
+            out[i*2] = 0xFFFF;
         }
     }
 }
