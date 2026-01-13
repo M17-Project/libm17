@@ -5,7 +5,7 @@
 // - CRC calculating functions (arbitrary length)
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 29 December 2023
+// M17 Foundation, 13 January 2026
 //--------------------------------------------------------------------
 #include <string.h>
 #include <m17.h>
@@ -20,7 +20,7 @@ const uint16_t M17_CRC_POLY = 0x5935;
  * @param len Input's length.
  * @return uint16_t CRC value.
  */
-uint16_t CRC_M17(const uint8_t* in, const uint16_t len)
+uint16_t CRC_M17(const uint8_t* in, uint16_t len)
 {
 	uint32_t crc=0xFFFF; //init val
 
