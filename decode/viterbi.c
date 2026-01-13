@@ -5,16 +5,15 @@
 // - the Viterbi decoder
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 29 December 2023
+// M17 Project, 13 January 2026
 //--------------------------------------------------------------------
 #include <stdio.h>
 #include <string.h>
-
 #include <m17.h>
 
 static uint32_t metricsA[M17_CONVOL_STATES];
 static uint32_t metricsB[M17_CONVOL_STATES];
-static uint16_t viterbi_history[244];
+static uint16_t viterbi_history[M17_VITERBI_HIST_LEN];
 
 static uint32_t *prevMetrics = metricsA;
 static uint32_t *currMetrics = metricsB;
@@ -27,10 +26,10 @@ static uint32_t *currMetrics = metricsB;
  * @param len Input length in bits.
  * @return Number of bit errors corrected.
  */
-uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len)
+uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len)
 {
-    if(len > 244*2)
-		fprintf(stderr, "Input size exceeds max history\n");
+    if(len > M17_VITERBI_HIST_LEN_2)
+		return UINT32_MAX; //emit a large value
 
     viterbi_reset();
 
@@ -57,15 +56,15 @@ uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len)
  * @param p_len Puncturing matrix length (entries).
  * @return Number of bit errors corrected.
  */
-uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, const uint16_t in_len, const uint16_t p_len)
+uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len)
 {
-    if(in_len > 244*2)
-		fprintf(stderr, "Input size exceeds max history\n");
+    if(in_len > M17_VITERBI_HIST_LEN_2)
+		return UINT32_MAX; //emit a large value
 
-	uint16_t umsg[244*2];           //unpunctured message
-	uint8_t p=0;		            //puncturer matrix entry
-	uint16_t u=0;		            //bits count - unpunctured message
-    uint16_t i=0;                   //bits read from the input message
+	uint16_t umsg[M17_VITERBI_HIST_LEN_2];  //unpunctured message
+	uint8_t p=0;		                    //puncturer matrix entry
+	uint16_t u=0;		                    //bits count - unpunctured message
+    uint16_t i=0;                           //bits read from the input message
 
 	while(i<in_len)
 	{
@@ -94,7 +93,7 @@ uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_
  * @param s1 Cost of the second symbol.
  * @param pos Bit position in history.
  */
-void viterbi_decode_bit(uint16_t s0, uint16_t s1, const size_t pos)
+void viterbi_decode_bit(uint16_t s0, uint16_t s1, size_t pos)
 {
     static const uint16_t COST_TABLE_0[] = {0, 0, 0, 0, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
     static const uint16_t COST_TABLE_1[] = {0, 0xFFFF, 0xFFFF, 0, 0, 0xFFFF, 0xFFFF, 0};

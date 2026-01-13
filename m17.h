@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.1.5"
+#define LIBM17_VERSION		"1.1.6"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -223,6 +223,8 @@ extern const uint16_t EOT_MRKR;
 // M17 C library - decode/viterbi.c
 #define M17_CONVOL_K				5									//constraint length K=5
 #define M17_CONVOL_STATES	        (1 << (M17_CONVOL_K - 1))			//number of states of the convolutional encoder
+#define M17_VITERBI_HIST_LEN		244
+#define M17_VITERBI_HIST_LEN_2		(2*M17_VITERBI_HIST_LEN)
 
 uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len);
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len);
