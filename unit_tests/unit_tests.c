@@ -906,14 +906,48 @@ void meta_position(void)
 
 void crc_checks(void)
 {
-    uint8_t testvec[256];
+    uint8_t testvec[256+2] = {0};
     for(uint16_t i=0; i<256; i++)
         testvec[i]=i;
 
+    /* known-good vectors */
     TEST_ASSERT_EQUAL_UINT16(0xFFFF, CRC_M17((uint8_t*)"", 0));
     TEST_ASSERT_EQUAL_UINT16(0x206E, CRC_M17((uint8_t*)"A", 1));
     TEST_ASSERT_EQUAL_UINT16(0x772B, CRC_M17((uint8_t*)"123456789", 9));
     TEST_ASSERT_EQUAL_UINT16(0x1C31, CRC_M17(testvec, 256));
+
+    /* known-good vector with CRC appended */
+    uint16_t crc = CRC_M17(testvec, 256);
+    testvec[256] = crc>>8;
+    testvec[257] = crc&0xFF;
+    TEST_ASSERT_EQUAL_UINT16(0x0000, CRC_M17(testvec, 256+2));
+
+    /* determinism */
+    uint16_t crc_ref = CRC_M17(testvec, 256);
+    uint16_t crc_rep = CRC_M17(testvec, 256);
+    TEST_ASSERT_EQUAL_UINT16(crc_ref, crc_rep);
+
+    /* single-bit corruption */
+    testvec[21] ^= 0x08;   /* flip 1 bit */
+    TEST_ASSERT_NOT_EQUAL(crc_ref, CRC_M17(testvec, 256));
+    testvec[21] ^= 0x08;   /* restore */
+
+    /* another single-bit corruption */
+    testvec[37] ^= 0x10;
+    TEST_ASSERT_NOT_EQUAL(crc_ref, CRC_M17(testvec, 256));
+    testvec[37] ^= 0x10;
+
+    /* multi-bit corruption (same byte) */
+    testvec[14] ^= 0x55;
+    TEST_ASSERT_NOT_EQUAL(crc_ref, CRC_M17(testvec, 256));
+    testvec[14] ^= 0x55;
+
+    /* multi-byte corruption */
+    testvec[100] ^= 0xFF;
+    testvec[101] ^= 0xFF;
+    TEST_ASSERT_NOT_EQUAL(crc_ref, CRC_M17(testvec, 256));
+    testvec[100] ^= 0xFF;
+    testvec[101] ^= 0xFF;
 }
 
 int main(void)
