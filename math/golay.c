@@ -7,10 +7,9 @@
 // - Link Information Channel (LICH) decoder
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 29 December 2023
+// M17 Project, 13 January 2026
 //--------------------------------------------------------------------
 #include <string.h>
-
 #include <m17.h>
 
 /**
@@ -39,7 +38,7 @@ const uint16_t decode_matrix[12]=
  * @param data 12-bit input value (right justified).
  * @return uint32_t 24-bit Golay codeword.
  */
-uint32_t golay24_encode(const uint16_t data)
+uint32_t golay24_encode(uint16_t data)
 {
     uint16_t checksum=0;
 
@@ -127,13 +126,14 @@ uint32_t s_detect_errors(const uint16_t* codeword)
         return soft_to_int(syndrome, 12);
     }
 
+    uint16_t scoded_error[12]; //soft coded_error
+    uint16_t sc[12]; //syndrome^coded_error
+
     //one of the errors in data part, up to 3 in parity
     for(uint8_t i = 0; i<12; i++)
     {
         uint16_t e = 1<<i;
         uint16_t coded_error = encode_matrix[i];
-        uint16_t scoded_error[12]; //soft coded_error
-        uint16_t sc[12]; //syndrome^coded_error
 
         int_to_soft(scoded_error, coded_error, 12);
         soft_XOR(sc, syndrome, scoded_error, 12);
@@ -154,8 +154,6 @@ uint32_t s_detect_errors(const uint16_t* codeword)
     	{
     		uint16_t e = (1<<i) | (1<<j);
         	uint16_t coded_error = encode_matrix[i]^encode_matrix[j];
-        	uint16_t scoded_error[12]; //soft coded_error
-	        uint16_t sc[12]; //syndrome^coded_error
 
 	        int_to_soft(scoded_error, coded_error, 12);
 	        soft_XOR(sc, syndrome, scoded_error, 12);

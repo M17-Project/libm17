@@ -8,7 +8,7 @@
 // - fixed-valued multiplication and division
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 29 December 2023
+// M17 Project, 13 January 2026
 //--------------------------------------------------------------------
 #include <math.h>
 #include <m17.h>
@@ -21,7 +21,7 @@
  * @param v2 Second value.
  * @return abs(v1-v2) value.
  */
-uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2)
+uint16_t q_abs_diff(uint16_t v1, uint16_t v2)
 {
     if(v2 > v1) return v2 - v1;
     return v1 - v2;
@@ -35,7 +35,7 @@ uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2)
  * @param n Vectors' size.
  * @return float L2 norm.
  */
-float eucl_norm(const float* in1, const int8_t* in2, const uint8_t n)
+float eucl_norm(const float* in1, const int8_t* in2, uint8_t n)
 {
     float tmp = 0.0f;
 
@@ -56,7 +56,7 @@ float eucl_norm(const float* in1, const int8_t* in2, const uint8_t n)
  * @param n Vectors' size.
  * @return float Squared L2 norm.
  */
-float sq_eucl_norm(const float* in1, const int8_t* in2, const uint8_t n)
+float sq_eucl_norm(const float* in1, const int8_t* in2, uint8_t n)
 {
     float tmp = 0.0f;
 
@@ -75,11 +75,11 @@ float sq_eucl_norm(const float* in1, const int8_t* in2, const uint8_t n)
  * @param in Input value.
  * @param len Input's bit length.
  */
-void int_to_soft(uint16_t* out, const uint16_t in, const uint8_t len)
+void int_to_soft(uint16_t* out, uint16_t in, uint8_t len)
 {
 	for(uint8_t i=0; i<len; i++)
 	{
-		(in>>i)&1 ? (out[i]=0xFFFF) : (out[i]=0);
+		out[i] = (in>>i)&1 ? 0xFFFF : 0;
 	}
 }
 
@@ -90,7 +90,7 @@ void int_to_soft(uint16_t* out, const uint16_t in, const uint8_t len)
  * @param len Input's length.
  * @return uint16_t Return value.
  */
-uint16_t soft_to_int(const uint16_t* in, const uint8_t len)
+uint16_t soft_to_int(const uint16_t* in, uint8_t len)
 {
 	uint16_t tmp=0;
 
@@ -110,7 +110,7 @@ uint16_t soft_to_int(const uint16_t* in, const uint8_t len)
  * @param b Addend 2.
  * @return uint16_t Sum = a+b.
  */
-uint16_t add16(const uint16_t a, const uint16_t b)
+uint16_t add16(uint16_t a, uint16_t b)
 {
 	uint32_t r=(uint32_t)a+b;
 	
@@ -124,7 +124,7 @@ uint16_t add16(const uint16_t a, const uint16_t b)
  * @param b Subtrahent.
  * @return uint16_t Difference = a-b.
  */
-uint16_t sub16(const uint16_t a, const uint16_t b)
+uint16_t sub16(uint16_t a, uint16_t b)
 {	
 	if(a>=b)
 		return a-b;
@@ -139,7 +139,7 @@ uint16_t sub16(const uint16_t a, const uint16_t b)
  * @param b Divisor.
  * @return uint16_t Quotient = a/b.
  */
-uint16_t div16(const uint16_t a, const uint16_t b)
+uint16_t div16(uint16_t a, uint16_t b)
 {
 	uint32_t aa=(uint32_t)a<<16;
 	uint32_t r=aa/b;
@@ -154,7 +154,7 @@ uint16_t div16(const uint16_t a, const uint16_t b)
  * @param b Multiplier.
  * @return uint16_t Product = a*b.
  */
-uint16_t mul16(const uint16_t a, const uint16_t b)
+uint16_t mul16(uint16_t a, uint16_t b)
 {
 	return (uint16_t)(((uint32_t)a*b)>>16);
 }
@@ -167,7 +167,7 @@ uint16_t mul16(const uint16_t a, const uint16_t b)
  * @param b Input B.
  * @return uint16_t Output = A xor B.
  */
-uint16_t soft_bit_XOR(const uint16_t a, const uint16_t b)
+uint16_t soft_bit_XOR(uint16_t a, uint16_t b)
 {
 	//a(1-b)+b(1-a)
 	//return mul16(div16(0xFFFF-b, 0xFFFF), div16(a, 0xFFFF)) + mul16(div16(b, 0xFFFF), div16(0xFFFF-a, 0xFFFF));
@@ -180,7 +180,7 @@ uint16_t soft_bit_XOR(const uint16_t a, const uint16_t b)
  * @param a Input A.
  * @return uint16_t Output = not A.
  */
-uint16_t soft_bit_NOT(const uint16_t a)
+uint16_t soft_bit_NOT(uint16_t a)
 {
 	return 0xFFFFU-a;
 }
@@ -193,7 +193,7 @@ uint16_t soft_bit_NOT(const uint16_t a)
  * @param b Input vector B.
  * @param len Vectors' size.
  */
-void soft_XOR(uint16_t* out, const uint16_t* a, const uint16_t* b, const uint8_t len)
+void soft_XOR(uint16_t* out, const uint16_t* a, const uint16_t* b, uint8_t len)
 {
 	for(uint8_t i=0; i<len; i++)
 		out[i]=soft_bit_XOR(a[i], b[i]);
