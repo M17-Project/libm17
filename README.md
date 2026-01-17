@@ -4,11 +4,11 @@
 **Libm17** is a C implementation of the [M17 protocol's](https://en.wikipedia.org/wiki/M17_(amateur_radio)) RF stack, as described by its [specification document](https://spec.m17project.org).
 
 The library includes:
-- soft symbol slicer and a symbol mapper,
+- soft symbol slicer (RX) and symbol mapper (TX),
 - convolutional encoder with soft Viterbi decoder (utilizing fixed point arithmetic),
-- Golay encoder with soft decoder (fixed point),
+- Golay encoder with soft decoder (fixed point arithmetic),
 - bit interleaver and randomizer,
-- cyclic redundancy check (CRC) calculation (for both LSF/LSD and arbitrary input),
+- cyclic redundancy check (CRC) calculation (LSF/LSD and arbitrary input),
 - callsign encoder and decoder,
 - LSF/LSD META field extended callsign data, cryptographic nonce, and GNSS position data encoders/decoders,
 - Root Raised Cosine (RRC) filter taps (for 24kHz and 48kHz sample rates) - linear and polyphase.
@@ -20,18 +20,18 @@ As per the [specification document](https://github.com/M17-Project/M17_spec), th
 
 ### Legacy Makefile building
 1. Build the shared object `libm17.so` by running `make`.<br>
-2. You can install the library object with `make install`.
+2. Optionally, the library object can be installed with `make install`.
 
-Unit tests are available and can be run with `make test && make testrun`.
+Unit tests are available and can be compiled and run with `make test && make testrun`.
 
 ### Cmake building
 1. Configure the build - run `cmake -B build` to get default options.<br>
 2. Build the library by running `cmake --build build`.<br>
 3. At this point tests can be run by doing any of:<br>
-`cmake --build build --target test`<br>
-`ctest --test-dir build`<br>
-`./build/unti_tests/unit_tests`
-4. Finally, installation is just `cmake --install build`
+* `cmake --build build --target test`<br>
+* `ctest --test-dir build`<br>
+* `./build/unit_tests/unit_tests`
+4. Finally, installation is just `sudo cmake --install build`
 
 ### Unit tests
 Unit tests use the [Unity](https://github.com/ThrowTheSwitch/Unity) unit testing framework.
