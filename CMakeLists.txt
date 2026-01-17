@@ -49,6 +49,7 @@ math/golay.c
 payload/lich.c
 payload/call.c
 payload/crc.c
+payload/lsf.c
 m17.c
 )
 
