@@ -38,6 +38,7 @@ void decode_callsign_value(char *outp, uint64_t inp)
         }
         else //reserved address range
         {
+            outp[0]=0;
             return;
         }
 	}
