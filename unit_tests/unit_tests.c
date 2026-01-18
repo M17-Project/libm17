@@ -1087,16 +1087,32 @@ void meta_position(void)
 
     int retval = get_LSF_meta_position(&data_source_n, &station_type_n, &lat_n, &lon_n, &flags_n, &altitude_n, &bearing_n, &speed_n, &radius_n, &lsf);
 
+    static const float radius_lut[8] =
+    {
+        1.0f, 2.0f, 4.0f, 8.0f,
+        16.0f, 32.0f, 64.0f, 128.0f
+    };
+
+    uint8_t q = 7;
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        if (radius < radius_lut[i])
+        {
+            q = i;
+            break;
+        }
+    }
+
     TEST_ASSERT_EQUAL_INT8(0, retval);
     TEST_ASSERT_EQUAL_UINT8(data_source, data_source_n);
     TEST_ASSERT_EQUAL_UINT8(station_type, station_type_n);
-    TEST_ASSERT(fabsf(lat-lat_n) < 0.001f);
-    TEST_ASSERT(fabsf(lon-lon_n) < 0.001f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, lat, lat_n);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, lon, lon_n);
     TEST_ASSERT_EQUAL_UINT8(flags, flags_n);
-    TEST_ASSERT(fabsf(altitude-altitude_n) < 0.001f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, altitude, altitude_n);
     TEST_ASSERT_EQUAL_UINT16(bearing, bearing_n);
-    TEST_ASSERT(fabsf(speed-speed_n) < 0.001f);
-    TEST_ASSERT(fabsf(powf(2.0f, ceil(log2f(radius)))-radius_n) < 0.001f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, speed, speed_n);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, radius_lut[q], radius_n);
 }
 
 void crc_checks(void)

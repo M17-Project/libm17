@@ -87,12 +87,21 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
 	tmp[0] = (data_source<<4) | station_type;
 
     tmp[1] |= validity<<4;								//gnss data validity field
-	uint8_t log_r;
-	if(radius==0)
-		log_r = 0;
-	else
-		log_r = (uint8_t)M17_MAX(ceilf(log2f(radius)), 0);
-	log_r = (log_r>7) ? 7 : log_r;						//limit log2(r) to 7
+	static const float radius_lut[8] =
+	{
+		1.0f, 2.0f, 4.0f, 8.0f,
+		16.0f, 32.0f, 64.0f, 128.0f
+	};
+
+	uint8_t log_r = 7;
+	for (uint8_t i = 0; i < 8; i++)
+	{
+		if (radius < radius_lut[i])
+		{
+			log_r = i;
+			break;
+		}
+	}
     tmp[1] |= log_r<<1;									//log2 radius
     tmp[1] |= (bearing>>8)&1;							//bearing MSB
 
@@ -102,11 +111,13 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
     lat_tmp = lat/90.0f * 8388607.0f;
 	lon_tmp = lon/180.0f * 8388607.0f;
 
-	for(uint8_t i=0; i<3; i++)
-	{
-        tmp[3+i] = *((uint8_t*)&lat_tmp+2-i);
-        tmp[6+i] = *((uint8_t*)&lon_tmp+2-i);
-    }
+	tmp[3] = (lat_tmp >> 16) & 0xFF;
+	tmp[4] = (lat_tmp >> 8) & 0xFF;
+	tmp[5] = lat_tmp & 0xFF;
+
+	tmp[6] = (lon_tmp >> 16) & 0xFF;
+	tmp[7] = (lon_tmp >> 8) & 0xFF;
+	tmp[8] = lon_tmp & 0xFF;
 
     uint16_t alt = roundf((500.0f + altitude)*2.0f);	//altitude
 	tmp[9] = alt>>8;
