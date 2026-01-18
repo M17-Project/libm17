@@ -8,7 +8,7 @@
 // M17 Foundation, 13 January 2026
 //--------------------------------------------------------------------
 #include <string.h>
-#include <m17.h>
+#include "m17.h"
 
 //M17 CRC polynomial
 const uint16_t M17_CRC_POLY = 0x5935;

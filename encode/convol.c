@@ -9,7 +9,7 @@
 // M17 Foundation, 12 March 2025
 //--------------------------------------------------------------------
 #include <string.h>
-#include <m17.h>
+#include "m17.h"
 
 /**
  * @brief P_1 puncture pattern for Link Setup Frames (LSF).

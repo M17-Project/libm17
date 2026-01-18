@@ -9,7 +9,7 @@
 //--------------------------------------------------------------------
 #include <stdio.h>
 #include <string.h>
-#include <m17.h>
+#include "m17.h"
 
 static uint32_t metricsA[M17_CONVOL_STATES];
 static uint32_t metricsB[M17_CONVOL_STATES];

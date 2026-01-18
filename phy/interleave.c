@@ -4,8 +4,7 @@
 // Wojciech Kaczmarski, SP5WWP
 // M17 Project, 28 December 2023
 //-------------------------------
-
-#include <m17.h>
+#include "m17.h"
 
 //interleaver pattern
 const uint16_t intrl_seq[SYM_PER_PLD*2]=

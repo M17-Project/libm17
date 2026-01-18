@@ -5,9 +5,9 @@
 // - Link Setup Frame related functions
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 22 August 2025
+// M17 Foundation, 18 January 2026
 //--------------------------------------------------------------------
-#include <m17.h>
+#include "m17.h"
 
 /**
  * @brief Update LSF CRC.
@@ -31,10 +31,10 @@ void update_LSF_CRC(lsf_t *lsf)
  * @param meta Pointer to a 14-byte array for META field contents.
  *   NULL pointer zeros out META field.
  */
-void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14])
+void set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const uint8_t meta[14])
 {
-	encode_callsign_bytes(lsf->src, (uint8_t*)src);
-	encode_callsign_bytes(lsf->dst, (uint8_t*)dst);
+	encode_callsign_bytes(lsf->src, src);
+	encode_callsign_bytes(lsf->dst, dst);
 
 	lsf->type[0] = type >> 8;
 	lsf->type[1] = type & 0xFF;
@@ -133,8 +133,8 @@ void set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2)
 {
 	uint8_t tmp[14] = {0};
 
-	encode_callsign_bytes(&tmp[0], (uint8_t*)cf1);
-	encode_callsign_bytes(&tmp[6], (uint8_t*)cf2);
+	encode_callsign_bytes(&tmp[0], cf1);
+	encode_callsign_bytes(&tmp[6], cf2);
 
 	set_LSF_meta(lsf, tmp);
 }
@@ -146,7 +146,7 @@ void set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2)
  * @param ts Timestamp (Unix epoch).
  * @param rand Random, 10-byte vector.
  */
-void set_LSF_meta_nonce(lsf_t *lsf, const time_t ts, const uint8_t rand[10])
+void set_LSF_meta_nonce(lsf_t *lsf, time_t ts, const uint8_t rand[10])
 {
 	uint8_t tmp[14] = {0};
 	uint32_t ts_2020 = (uint32_t)ts - 1577836800UL; //convert to 2020 epoch
@@ -182,17 +182,22 @@ int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
 	if(CRC_M17((uint8_t*)lsf, sizeof(*lsf)))
 		return -1;
 
-	uint8_t tmp[14];
-	memcpy(tmp, lsf->meta, 14);
+	static const float radius_lut[8] =
+	{
+		1.0f, 2.0f, 4.0f, 8.0f,
+		16.0f, 32.0f, 64.0f, 128.0f
+	};
+
+	const uint8_t *tmp = lsf->meta;
 
 	if(data_source!=NULL) *data_source = (tmp[0]&0xF0)>>4;
 	if(station_type!=NULL) *station_type = tmp[0]&0x0F;
 
 	if(validity!=NULL) *validity = (tmp[1]&0xF0)>>4;
 
-	if(radius!=NULL) *radius = powf(2.0f, (tmp[1]>>1)&0x7);
+	if(radius!=NULL) *radius = radius_lut[(tmp[1] >> 1) & 0x7];
 
-	if(bearing!=NULL) *bearing = ((((uint16_t)tmp[1])&1)<<8)+tmp[2];
+	if(bearing!=NULL) *bearing = ((uint16_t)(tmp[1] & 1) << 8) | tmp[2];
 
 	if(lat!=NULL)
 	{

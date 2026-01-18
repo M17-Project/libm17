@@ -16,8 +16,8 @@ clean:
 fclean:
 	rm -f $(TARGET)
 
-test:
-	$(CC) $(CFLAGS) unit_tests/unit_tests.c -o unit_tests/unit_tests -lm -lunity -lm17
+test: $(TARGET)
+	$(CC) $(CFLAGS) unit_tests/unit_tests.c ./libm17.so -o unit_tests/unit_tests -lunity -lm
 
 testrun:
 	./unit_tests/unit_tests

@@ -4,7 +4,7 @@
 // Wojciech Kaczmarski, SP5WWP
 // M17 Project, 29 December 2023
 //--------------------------------------------------------------------
-#include <m17.h>
+#include "m17.h"
 
 //syncwords
 const uint16_t SYNC_LSF = 0x55F7;

@@ -1044,7 +1044,7 @@ void callsign_encode_decode(void)
     uint8_t v[6], ref[6];
 
     memset(ref, 0xFF, 6);
-    encode_callsign_bytes(v, (uint8_t*)"@ALL");
+    encode_callsign_bytes(v, "@ALL");
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(v, ref, 6);
 
@@ -1055,7 +1055,7 @@ void callsign_encode_decode(void)
     ref[3] = 0x13;
     ref[4] = 0xD1;
     ref[5] = 0x06;
-    encode_callsign_bytes(v, (uint8_t*)"N0CALL");
+    encode_callsign_bytes(v, "N0CALL");
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(v, ref, 6);
 }

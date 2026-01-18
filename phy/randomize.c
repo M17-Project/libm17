@@ -4,7 +4,7 @@
 // Wojciech Kaczmarski, SP5WWP
 // M17 Project, 29 December 2023
 //--------------------------------------------------------------------
-#include <m17.h>
+#include "m17.h"
 
 //randomizing pattern
 const uint8_t rand_seq[46]=

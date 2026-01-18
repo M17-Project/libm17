@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.1.6"
+#define LIBM17_VERSION		"1.1.7"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -125,10 +125,10 @@ void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25]);
 #define U40_9		(262144000000000ULL)	//40^9
 #define U40_9_8		(268697600000000ULL)	//40^9+40^8
 
-void decode_callsign_bytes(uint8_t *outp, const uint8_t inp[6]);
-void decode_callsign_value(uint8_t *outp, uint64_t inp);
-int8_t encode_callsign_bytes(uint8_t out[6], const uint8_t *inp);
-int8_t encode_callsign_value(uint64_t *out, const uint8_t *inp);
+void decode_callsign_bytes(char *outp, const uint8_t inp[6]);
+void decode_callsign_value(char *outp, uint64_t inp);
+int8_t encode_callsign_bytes(uint8_t out[6], const char *inp);
+int8_t encode_callsign_value(uint64_t *out, const char *inp);
 
 // M17 C library - payload/crc.c
 //M17 CRC polynomial
@@ -143,7 +143,7 @@ void unpack_LICH(uint8_t* out, const uint8_t in[12]);
 
 // M17 C library - payload/lsf.c
 void update_LSF_CRC(lsf_t *lsf);
-void set_LSF(lsf_t *lsf, char *src, char *dst, uint16_t type, uint8_t meta[14]);
+void set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const uint8_t meta[14]);
 void set_LSF_meta(lsf_t *lsf, const uint8_t meta[14]);
 void set_LSF_meta_position(lsf_t *lsf, uint8_t data_source, uint8_t station_type,
 	float lat, float lon, uint8_t validity, float altitude, uint16_t bearing, float speed, float radius);

@@ -10,7 +10,7 @@
 // M17 Project, 13 January 2026
 //--------------------------------------------------------------------
 #include <string.h>
-#include <m17.h>
+#include "m17.h"
 
 /**
  * @brief Precomputed encoding matrix for Golay(24, 12).

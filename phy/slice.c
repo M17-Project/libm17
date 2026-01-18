@@ -4,8 +4,7 @@
 // Wojciech Kaczmarski, SP5WWP
 // M17 Project, 13 January 2026
 //-------------------------------
-
-#include <m17.h>
+#include "m17.h"
 
 /**
  * @brief Slice payload symbols into soft dibits.

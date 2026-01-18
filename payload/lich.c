@@ -8,7 +8,7 @@
 // M17 Project, 8 January 2024
 //--------------------------------------------------------------------
 #include <string.h>
-#include <m17.h>
+#include "m17.h"
 
 /**
  * @brief Extract LICH from the whole LSF.

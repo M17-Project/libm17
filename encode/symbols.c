@@ -4,7 +4,7 @@
 // Wojciech Kaczmarski, SP5WWP
 // M17 Project, 8 January 2024
 //--------------------------------------------------------------------
-#include <m17.h>
+#include "m17.h"
 
 //dibits-symbols map (TX)
 const int8_t symbol_map[4]={+1, +3, -1, -3};
