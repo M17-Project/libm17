@@ -3,7 +3,7 @@ INC     = -I ./
 TARGET  = libm17.so
 VERSION = $(shell grep '#define LIBM17_VERSION' m17.h | awk '{print $$3}' | tr -d '"')
 
-CFLAGS  = $(INC) -fPIC -Wall -Wextra
+CFLAGS  = $(INC) -fPIC -Wall -Wextra -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wshadow
 LDFLAGS = -shared -lm
 SRCS    = m17.c $(filter-out unit_tests/unit_tests.c, $(wildcard */*.c))
 OBJS    = $(SRCS:.c=.o)

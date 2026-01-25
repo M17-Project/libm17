@@ -7,7 +7,7 @@
 // - Link Information Channel (LICH) decoder
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 13 January 2026
+// M17 Project, 25 January 2026
 //--------------------------------------------------------------------
 #include <string.h>
 #include "m17.h"
@@ -60,7 +60,7 @@ uint32_t golay24_encode(uint16_t data)
  * @param siz Vector's size.
  * @return uint32_t Sum of all values.
  */
-uint32_t s_popcount(const uint16_t* in, uint8_t siz)
+static uint32_t s_popcount(const uint16_t* in, uint8_t siz)
 {
 	uint32_t tmp=0;
 
@@ -76,7 +76,7 @@ uint32_t s_popcount(const uint16_t* in, uint8_t siz)
  * @param out
  * @param value
  */
-void s_calc_checksum(uint16_t* out, const uint16_t* value)
+static void s_calc_checksum(uint16_t* out, const uint16_t* value)
 {
     uint16_t checksum[12];
     uint16_t soft_em[12]; //soft valued encoded matrix entry
@@ -103,7 +103,7 @@ void s_calc_checksum(uint16_t* out, const uint16_t* value)
  * @param codeword Input 24-bit soft codeword.
  * @return uint32_t Detected errors vector.
  */
-uint32_t s_detect_errors(const uint16_t* codeword)
+static uint32_t s_detect_errors(const uint16_t* codeword)
 {
     uint16_t data[12];
     uint16_t parity[12];
@@ -111,8 +111,8 @@ uint32_t s_detect_errors(const uint16_t* codeword)
     uint16_t syndrome[12];
     uint32_t weight; //for soft popcount
 
-	memcpy((uint8_t*)data, (uint8_t*)&codeword[12], 2*12);
-	memcpy((uint8_t*)parity, (uint8_t*)&codeword[0], 2*12);
+	memcpy((uint8_t*)data, (const uint8_t*)&codeword[12], 2*12);
+	memcpy((uint8_t*)parity, (const uint8_t*)&codeword[0], 2*12);
 
 	s_calc_checksum(cksum, data);
 	soft_XOR(syndrome, parity, cksum, 12);

@@ -8,7 +8,7 @@
 // - fixed-valued multiplication and division
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 13 January 2026
+// M17 Project, 25 January 2026
 //--------------------------------------------------------------------
 #include <math.h>
 #include "m17.h"
@@ -110,7 +110,7 @@ uint16_t soft_to_int(const uint16_t* in, uint8_t len)
  * @param b Addend 2.
  * @return uint16_t Sum = a+b.
  */
-uint16_t add16(uint16_t a, uint16_t b)
+static uint16_t add16(uint16_t a, uint16_t b)
 {
 	uint32_t r=(uint32_t)a+b;
 	
@@ -124,7 +124,7 @@ uint16_t add16(uint16_t a, uint16_t b)
  * @param b Subtrahent.
  * @return uint16_t Difference = a-b.
  */
-uint16_t sub16(uint16_t a, uint16_t b)
+static uint16_t sub16(uint16_t a, uint16_t b)
 {	
 	if(a>=b)
 		return a-b;

@@ -5,7 +5,7 @@
 // - Link Setup Frame related functions
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 18 January 2026
+// M17 Foundation, 25 January 2026
 //--------------------------------------------------------------------
 #include "m17.h"
 
@@ -190,7 +190,7 @@ void set_LSF_meta_nonce(lsf_t *lsf, time_t ts, const uint8_t rand[10])
 int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
 	float *lat, float *lon, uint8_t *validity, float *altitude, uint16_t *bearing, float *speed, float *radius, const lsf_t *lsf)
 {
-	if(CRC_M17((uint8_t*)lsf, sizeof(*lsf)))
+	if(CRC_M17((const uint8_t*)lsf, sizeof(*lsf)))
 		return -1;
 
 	static const float radius_lut[8] =
