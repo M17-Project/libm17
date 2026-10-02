@@ -246,7 +246,6 @@ int8_t gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t 
             return -1;
         }
         gen_syncword_i8(out, &sym_cnt, SYNC_STR);
-        extract_LICH(lich, lich_cnt, lsf);
         encode_LICH(lich_encoded, lich);
         unpack_LICH(enc_bits, lich_encoded);
         conv_encode_stream_frame(&enc_bits[96], data, fn); //stream frames require 16-byte payloads
