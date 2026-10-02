@@ -162,7 +162,7 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
  * @param lsf Pointer to an LSF struct.
  * @param cf1 Callsign Field 1.
  * @param cf2 Callsign Field 2.
- * @return 0: success
+ * @return int8_t 0: success
  */
 int8_t set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2)
 {
@@ -214,7 +214,7 @@ void set_LSF_meta_nonce(lsf_t *lsf, time_t ts, const uint8_t rand[10])
  * @param speed Speed in kilometers per hour.
  * @param radius Position uncertainty in meters.
  * @param lsf Pointer to an LSF struct.
- * @return 0 if CRC is valid, -1 otherwise.
+ * @return int8_t 0 if CRC is valid, -1 otherwise.
  */
 int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
 	float *lat, float *lon, uint8_t *validity, float *altitude, uint16_t *bearing, float *speed, float *radius, const lsf_t *lsf)

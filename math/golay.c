@@ -7,7 +7,7 @@
 // - Link Information Channel (LICH) decoder
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 25 January 2026
+// M17 Project, 2 October 2026
 //--------------------------------------------------------------------
 #include <string.h>
 #include "m17.h"
@@ -238,25 +238,30 @@ uint16_t golay24_sdecode(const uint16_t codeword[24])
  *
  * @param outp An array of packed, decoded bits.
  * @param inp Pointer to an array of 96 soft bits.
+ * @return int8_t 0: OK, -1: at least one Golay codeword was uncorrectable
+ *   (outp is zeroed, as its contents cannot be trusted).
  */
-void decode_LICH(uint8_t outp[6], const uint16_t inp[96])
+int8_t decode_LICH(uint8_t outp[6], const uint16_t inp[96])
 {
-    uint16_t tmp;
+    uint16_t tmp[4];
 
     memset(outp, 0, 6);
 
-    tmp=golay24_sdecode(&inp[0]);
-    outp[0]=(tmp>>4)&0xFF;
-    outp[1]|=(tmp&0xF)<<4;
-    tmp=golay24_sdecode(&inp[1*24]);
-    outp[1]|=(tmp>>8)&0xF;
-    outp[2]=tmp&0xFF;
-    tmp=golay24_sdecode(&inp[2*24]);
-    outp[3]=(tmp>>4)&0xFF;
-    outp[4]|=(tmp&0xF)<<4;
-    tmp=golay24_sdecode(&inp[3*24]);
-    outp[4]|=(tmp>>8)&0xF;
-    outp[5]=tmp&0xFF;
+    for(uint8_t i=0; i<4; i++)
+    {
+        tmp[i]=golay24_sdecode(&inp[i*24]);
+        if(tmp[i]==0xFFFF) //uncorrectable
+            return -1;
+    }
+
+    outp[0]=(tmp[0]>>4)&0xFF;
+    outp[1]=((tmp[0]&0xF)<<4)|((tmp[1]>>8)&0xF);
+    outp[2]=tmp[1]&0xFF;
+    outp[3]=(tmp[2]>>4)&0xFF;
+    outp[4]=((tmp[2]&0xF)<<4)|((tmp[3]>>8)&0xF);
+    outp[5]=tmp[3]&0xFF;
+
+    return 0;
 }
 
 void encode_LICH(uint8_t outp[12], const uint8_t inp[6])

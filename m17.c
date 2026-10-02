@@ -2,7 +2,7 @@
 // M17 C library - m17.c
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 12 March 2025
+// M17 Foundation, 2 October 2026
 //--------------------------------------------------------------------
 #include <string.h>
 #include "m17.h"
@@ -305,10 +305,11 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn,
 
 	//decode LICH
     uint8_t tmp[6];
-	decode_LICH(tmp, d_soft_bit);
+	int8_t lich_ok = decode_LICH(tmp, d_soft_bit);
     memcpy(lich, tmp, 5);
 
-	if(lich_cnt!=NULL) *lich_cnt = tmp[5]>>5;
+    //caller should throw away any chunk whose counter isn't 0..5
+	if(lich_cnt!=NULL) *lich_cnt = (lich_ok==0) ? tmp[5]>>5 : 0xFF;
 
 	e = viterbi_decode_punctured(tmp_frame_data, &d_soft_bit[96], puncture_pattern_2, 2*SYM_PER_PLD-96, sizeof(puncture_pattern_2));
 	

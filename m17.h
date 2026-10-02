@@ -158,7 +158,7 @@ extern const uint16_t decode_matrix[12];
 
 uint32_t golay24_encode(uint16_t data);
 uint16_t golay24_sdecode(const uint16_t codeword[24]);
-void decode_LICH(uint8_t outp[6], const uint16_t inp[96]);
+int8_t decode_LICH(uint8_t outp[6], const uint16_t inp[96]);
 void encode_LICH(uint8_t outp[12], const uint8_t inp[6]);
 
 // M17 C library - phy/interleave.c
