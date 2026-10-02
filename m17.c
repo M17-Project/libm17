@@ -252,12 +252,26 @@ void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t ty
 
 /**
  * @brief Decode the Link Setup Frame from a symbol stream.
+ * Uses the shared internal Viterbi context - not reentrant.
  *
  * @param lsf Pointer to an LSF struct.
  * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
  * @return uint32_t Viterbi metric for the payload.
  */
 uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
+{
+	return decode_LSF_ctx(NULL, lsf, pld_symbs);
+}
+
+/**
+ * @brief Decode the Link Setup Frame from a symbol stream.
+ *
+ * @param ctx Pointer to a Viterbi decoder context (NULL: shared internal context, not reentrant).
+ * @param lsf Pointer to an LSF struct.
+ * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
+ * @return uint32_t Viterbi metric for the payload.
+ */
+uint32_t decode_LSF_ctx(viterbi_ctx_t* ctx, lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
 {
 	uint8_t lsf_b[30+1];
 	uint16_t soft_bit[2*SYM_PER_PLD];
@@ -268,7 +282,7 @@ uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
 	randomize_soft_bits(soft_bit);
 	reorder_soft_bits(d_soft_bit, soft_bit);
 
-	e = viterbi_decode_punctured(lsf_b, d_soft_bit, puncture_pattern_1, 2*SYM_PER_PLD, sizeof(puncture_pattern_1));
+	e = viterbi_decode_punctured_ctx(ctx, lsf_b, d_soft_bit, puncture_pattern_1, 2*SYM_PER_PLD, sizeof(puncture_pattern_1));
 
 	//copy over the data starting at byte 1 (byte 0 needs to be omitted)
 	memcpy(lsf->dst, &lsf_b[1+0], 6);		//DST field
@@ -284,6 +298,7 @@ uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
 
 /**
  * @brief Decode a single Stream Frame from a symbol stream.
+ * Uses the shared internal Viterbi context - not reentrant.
  *
  * @param frame_data Pointer to a 16-byte array for the decoded payload.
  * @param lich Pointer to a 5-byte array for the decoded LICH data chunk.
@@ -295,6 +310,24 @@ uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
  * @return uint32_t Viterbi metric for the payload.
  */
 uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD])
+{
+	return decode_str_frame_ctx(NULL, frame_data, lich, fn, lich_cnt, pld_symbs);
+}
+
+/**
+ * @brief Decode a single Stream Frame from a symbol stream.
+ *
+ * @param ctx Pointer to a Viterbi decoder context (NULL: shared internal context, not reentrant).
+ * @param frame_data Pointer to a 16-byte array for the decoded payload.
+ * @param lich Pointer to a 5-byte array for the decoded LICH data chunk.
+ * @param fn Pointer to a uint16_t variable for the Frame Number.
+ * @param lich_cnt Pointer to a uint8_t variable for the LICH Counter.
+ *   Set to 0xFF if the LICH could not be decoded (lich is then zeroed).
+ *   Callers should discard the LICH chunk unless the counter is 0..5.
+ * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
+ * @return uint32_t Viterbi metric for the payload.
+ */
+uint32_t decode_str_frame_ctx(viterbi_ctx_t* ctx, uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD])
 {
 	uint16_t soft_bit[2*SYM_PER_PLD];
 	uint16_t d_soft_bit[2*SYM_PER_PLD];
@@ -312,7 +345,7 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn,
 
 	if(lich_cnt!=NULL) *lich_cnt = (lich_ok==0) ? tmp[5]>>5 : 0xFF;
 
-	e = viterbi_decode_punctured(tmp_frame_data, &d_soft_bit[96], puncture_pattern_2, 2*SYM_PER_PLD-96, sizeof(puncture_pattern_2));
+	e = viterbi_decode_punctured_ctx(ctx, tmp_frame_data, &d_soft_bit[96], puncture_pattern_2, 2*SYM_PER_PLD-96, sizeof(puncture_pattern_2));
 	
 	//shift 1+2 positions left - get rid of the encoded flushing bits and FN
     memcpy(frame_data, &tmp_frame_data[1+2], 16);
@@ -324,6 +357,7 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn,
 
 /**
  * @brief Decode a single Packet Frame from a symbol stream.
+ * Uses the shared internal Viterbi context - not reentrant.
  *
  * @param frame_data Pointer to a 25-byte array for the decoded payload.
  * @param eof Pointer to a uint8_t variable for the End of Frame marker.
@@ -332,6 +366,21 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn,
  * @return uint32_t Viterbi metric for the payload.
  */
 uint32_t decode_pkt_frame(uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD])
+{
+	return decode_pkt_frame_ctx(NULL, frame_data, eof, fn, pld_symbs);
+}
+
+/**
+ * @brief Decode a single Packet Frame from a symbol stream.
+ *
+ * @param ctx Pointer to a Viterbi decoder context (NULL: shared internal context, not reentrant).
+ * @param frame_data Pointer to a 25-byte array for the decoded payload.
+ * @param eof Pointer to a uint8_t variable for the End of Frame marker.
+ * @param fn Pointer to a uint8_t variable for the Frame Number.
+ * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
+ * @return uint32_t Viterbi metric for the payload.
+ */
+uint32_t decode_pkt_frame_ctx(viterbi_ctx_t* ctx, uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD])
 {
 	uint16_t soft_bit[2*SYM_PER_PLD];
 	uint16_t d_soft_bit[2*SYM_PER_PLD];
@@ -342,7 +391,7 @@ uint32_t decode_pkt_frame(uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, con
 	randomize_soft_bits(soft_bit);
 	reorder_soft_bits(d_soft_bit, soft_bit);
 
-	e = viterbi_decode_punctured(tmp_frame_data, d_soft_bit, puncture_pattern_3, 2*SYM_PER_PLD, sizeof(puncture_pattern_3));
+	e = viterbi_decode_punctured_ctx(ctx, tmp_frame_data, d_soft_bit, puncture_pattern_3, 2*SYM_PER_PLD, sizeof(puncture_pattern_3));
 	
 	//shift 1 position left - get rid of the encoded flushing bits
     memcpy(frame_data, &tmp_frame_data[1], 25);

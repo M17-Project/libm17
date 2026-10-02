@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.2.0"
+#define LIBM17_VERSION		"1.3.0"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -106,9 +106,13 @@ void gen_eot_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt);
 void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
 void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
 
+typedef struct viterbi_ctx viterbi_ctx_t; //Viterbi decoder context, defined in the decode/viterbi.c section below
 uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD]);
 uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD]);
 uint32_t decode_pkt_frame(uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD]);
+uint32_t decode_LSF_ctx(viterbi_ctx_t* ctx, lsf_t* lsf, const float pld_symbs[SYM_PER_PLD]);
+uint32_t decode_str_frame_ctx(viterbi_ctx_t* ctx, uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn, uint8_t* lich_cnt, const float pld_symbs[SYM_PER_PLD]);
+uint32_t decode_pkt_frame_ctx(viterbi_ctx_t* ctx, uint8_t frame_data[25], uint8_t* eof, uint8_t* fn, const float pld_symbs[SYM_PER_PLD]);
 
 // M17 C library - encode/convol.c
 extern const uint8_t puncture_pattern_1[61];
@@ -226,11 +230,33 @@ extern const uint16_t EOT_MRKR;
 #define M17_VITERBI_HIST_LEN		244
 #define M17_VITERBI_HIST_LEN_2		(2*M17_VITERBI_HIST_LEN)
 
+/**
+ * @brief Viterbi decoder context. Holds the complete decoder state, so that
+ * independent decodes (e.g. in separate threads) can run concurrently.
+ * The caller decides where it lives: stack, static storage, or heap.
+ * Contents are internal - do not access directly.
+ */
+struct viterbi_ctx
+{
+	uint32_t metrics[2][M17_CONVOL_STATES];		//path metrics, previous/current (alternating)
+	uint8_t  cur;								//index of the previous metrics in metrics[]
+	uint16_t history[M17_VITERBI_HIST_LEN];		//decision history
+	uint16_t umsg[M17_VITERBI_HIST_LEN_2];		//de-punctured input buffer
+};
+
+//functions without the _ctx suffix use a shared internal context - not reentrant
 uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len);
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len);
 void viterbi_decode_bit(uint16_t s0, uint16_t s1, size_t pos);
 uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len);
 void viterbi_reset(void);
+
+//_ctx functions: pass a pointer to a caller-provided context (NULL: shared internal context)
+uint32_t viterbi_decode_ctx(viterbi_ctx_t* ctx, uint8_t* out, const uint16_t* in, uint16_t len);
+uint32_t viterbi_decode_punctured_ctx(viterbi_ctx_t* ctx, uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len);
+void viterbi_decode_bit_ctx(viterbi_ctx_t* ctx, uint16_t s0, uint16_t s1, size_t pos);
+uint32_t viterbi_chainback_ctx(viterbi_ctx_t* ctx, uint8_t* out, size_t pos, uint16_t len);
+void viterbi_reset_ctx(viterbi_ctx_t* ctx);
 
 //End of Transmission symbol pattern
 extern const int8_t eot_symbols[8];
