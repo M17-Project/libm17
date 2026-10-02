@@ -216,7 +216,7 @@ static uint32_t s_detect_errors(const uint16_t* codeword)
  * @brief Soft decode Golay(24, 12) codeword.
  *
  * @param codeword Pointer to a 24-element soft-valued (fixed-point) bit codeword.
- * @return uint16_t Decoded data.
+ * @return uint16_t Decoded 12-bit data, or 0xFFFF if the codeword is uncorrectable.
  */
 uint16_t golay24_sdecode(const uint16_t codeword[24])
 {

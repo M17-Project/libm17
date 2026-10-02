@@ -289,6 +289,8 @@ uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD])
  * @param lich Pointer to a 5-byte array for the decoded LICH data chunk.
  * @param fn Pointer to a uint16_t variable for the Frame Number.
  * @param lich_cnt Pointer to a uint8_t variable for the LICH Counter.
+ *   Set to 0xFF if the LICH could not be decoded (lich is then zeroed).
+ *   Callers should discard the LICH chunk unless the counter is 0..5.
  * @param pld_symbs Input 184 symbols represented as floats: {-3, -1, +1, +3}.
  * @return uint32_t Viterbi metric for the payload.
  */
@@ -308,7 +310,6 @@ uint32_t decode_str_frame(uint8_t frame_data[16], uint8_t lich[5], uint16_t* fn,
 	int8_t lich_ok = decode_LICH(tmp, d_soft_bit);
     memcpy(lich, tmp, 5);
 
-    //caller should throw away any chunk whose counter isn't 0..5
 	if(lich_cnt!=NULL) *lich_cnt = (lich_ok==0) ? tmp[5]>>5 : 0xFF;
 
 	e = viterbi_decode_punctured(tmp_frame_data, &d_soft_bit[96], puncture_pattern_2, 2*SYM_PER_PLD-96, sizeof(puncture_pattern_2));

@@ -55,7 +55,7 @@ uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len)
  * @param punct Puncturing matrix.
  * @param in_len Input data length.
  * @param p_len Puncturing matrix length (entries).
- * @return Number of bit errors corrected.
+ * @return Number of bit errors corrected, or UINT32_MAX on invalid arguments.
  */
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len)
 {
@@ -64,7 +64,7 @@ uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_
 		return UINT32_MAX; //emit a large value
 
 	uint16_t umsg[M17_VITERBI_HIST_LEN_2];  //unpunctured message
-	uint8_t p=0;		                    //puncturer matrix entry
+	uint16_t p=0;		                    //puncturer matrix entry
 	uint16_t u=0;		                    //bits count - unpunctured message
 	uint16_t i=0;                           //bits read from the input message
 

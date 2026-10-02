@@ -44,7 +44,7 @@ void update_LSF_CRC(lsf_t *lsf)
  * @param type Value of the LSF TYPE field.
  * @param meta Pointer to a 14-byte array for META field contents.
  *   NULL pointer zeros out META field.
- * @return 0: success
+ * @return int8_t 0: success, -1: a callsign could not be encoded (LSF left unchanged).
  */
 int8_t set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const uint8_t meta[14])
 {
@@ -161,8 +161,8 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
  * 
  * @param lsf Pointer to an LSF struct.
  * @param cf1 Callsign Field 1.
- * @param cf2 Callsign Field 2.
- * @return int8_t 0: success
+ * @param cf2 Callsign Field 2 (optional, NULL: unused, filled with 0x00).
+ * @return int8_t 0: success, -1: a callsign could not be encoded (LSF left unchanged).
  */
 int8_t set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2)
 {
