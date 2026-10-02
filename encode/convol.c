@@ -6,7 +6,7 @@
 //   for the LSF, stream, packet, and BERT frames
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 18 January 2026
+// M17 Foundation, 2 October 2026
 //--------------------------------------------------------------------
 #include <string.h>
 #include "m17.h"
@@ -278,7 +278,7 @@ void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25])
 		uint8_t G1=(ud[i+4]                +ud[i+1]+ud[i+0])%2;
 		uint8_t G2=(ud[i+4]+ud[i+3]+ud[i+2]        +ud[i+0])%2;
 
-		if(puncture_pattern_2[p])
+		if(puncture_pattern_2[p] && pb<SYM_PER_PLD*2)
 		{
 			out[pb]=G1;
 			pb++;
@@ -287,7 +287,7 @@ void conv_encode_bert_frame(uint8_t out[SYM_PER_PLD*2], const uint8_t in[25])
 		p++;
 		p%=pp_len;
 
-		if(puncture_pattern_2[p])
+		if(puncture_pattern_2[p] && pb<SYM_PER_PLD*2)
 		{
 			out[pb]=G2;
 			pb++;

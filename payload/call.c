@@ -5,7 +5,7 @@
 // - callsign encoders and decoders
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 18 January 2026
+// M17 Project, 2 October 2026
 //--------------------------------------------------------------------
 #include <stdio.h>
 #include <string.h>
@@ -30,7 +30,7 @@ void decode_callsign_value(char *outp, uint64_t inp)
             sprintf(outp, "@ALL");
             return;
         }
-        else if(encoded<=U40_9_8) //#-address range
+        else if(encoded<U40_9_8) //#-address range
         {
             start=1;
             encoded-=U40_9;
@@ -102,14 +102,20 @@ int8_t encode_callsign_value(uint64_t *out, const char *inp)
 
     for(int8_t i=strlen(inp)-1; i>=start; i--)
     {
-        for(uint8_t j=0; j<40; j++)
+        char c=inp[i];
+        if(c>='a' && c<='z') //lowercase letters are accepted (spec, Appendix A.4)
+            c-='a'-'A';
+
+        uint8_t val=0; //any invalid character encodes as space (spec, Table A.1)
+        for(uint8_t j=1; j<40; j++)
         {
-            if(inp[i]==charMap[j])
+            if(c==charMap[j])
             {
-                tmp=tmp*40+j;
+                val=j;
                 break;
             }
         }
+        tmp=tmp*40+val;
     }
 
     if(start) //starts with a hash?

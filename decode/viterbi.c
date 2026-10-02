@@ -5,7 +5,7 @@
 // - the Viterbi decoder
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 13 January 2026
+// M17 Project, 2 October 2026
 //--------------------------------------------------------------------
 #include <stdio.h>
 #include <string.h>
@@ -28,7 +28,8 @@ static uint32_t *currMetrics = metricsB;
  */
 uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len)
 {
-    if(len > M17_VITERBI_HIST_LEN_2)
+    //input is consumed in pairs (G1, G2), so its length must be even
+    if(len > M17_VITERBI_HIST_LEN_2 || (len % 2) != 0)
 		return UINT32_MAX; //emit a large value
 
     viterbi_reset();
@@ -58,16 +59,22 @@ uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len)
  */
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len)
 {
-    if(in_len > M17_VITERBI_HIST_LEN_2)
+	//guard against NULL pointer, zero-length puncturer, and input oversize
+	if(punct == NULL || p_len == 0 || in_len > M17_VITERBI_HIST_LEN_2)
 		return UINT32_MAX; //emit a large value
 
 	uint16_t umsg[M17_VITERBI_HIST_LEN_2];  //unpunctured message
 	uint8_t p=0;		                    //puncturer matrix entry
 	uint16_t u=0;		                    //bits count - unpunctured message
-    uint16_t i=0;                           //bits read from the input message
+	uint16_t i=0;                           //bits read from the input message
 
 	while(i<in_len)
 	{
+		//the unpunctured length, not in_len, determines the buffer usage
+		//this also stops an all-zero puncturing pattern from looping forever
+		if(u >= M17_VITERBI_HIST_LEN_2)
+			return UINT32_MAX;
+
 		if(punct[p])
 		{
 			umsg[u]=in[i];
@@ -83,7 +90,16 @@ uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_
 		p%=p_len;
 	}
 
-    return viterbi_decode(out, umsg, u) - (u-in_len)*0x7FFF;
+	//pad an odd length result with an erasure, e.g. BERT: 368 bits with P2
+	//depuncture to 401, as the last punctured bit is discarded at the transmitter
+	if(u % 2)
+	{
+		if(u >= M17_VITERBI_HIST_LEN_2)
+			return UINT32_MAX;
+		umsg[u++]=0x7FFF;
+	}
+
+	return viterbi_decode(out, umsg, u) - (u-in_len)*0x7FFF;
 }
 
 /**
@@ -157,7 +173,7 @@ uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len)
     uint8_t state = 0;
     size_t bitPos = len+4;
 
-    memset(out, 0, (bitPos/8)+1);
+    memset(out, 0, (bitPos+7)/8);
 
     while(pos > 0)
     {

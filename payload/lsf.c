@@ -5,9 +5,23 @@
 // - Link Setup Frame related functions
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 25 January 2026
+// M17 Foundation, 2 October 2026
 //--------------------------------------------------------------------
 #include "m17.h"
+
+/**
+ * @brief Read a signed, 24-bit, big-endian two's complement value.
+ * Independent of host byte order.
+ *
+ * @param b Pointer to 3 bytes, MSB first.
+ * @return int32_t Sign-extended value.
+ */
+static int32_t s24_be(const uint8_t b[3])
+{
+	uint32_t u = ((uint32_t)b[0]<<16) | ((uint32_t)b[1]<<8) | b[2];
+
+	return (int32_t)u - (int32_t)((u & 0x800000UL) << 1); //sign extension
+}
 
 /**
  * @brief Update LSF CRC.
@@ -30,11 +44,18 @@ void update_LSF_CRC(lsf_t *lsf)
  * @param type Value of the LSF TYPE field.
  * @param meta Pointer to a 14-byte array for META field contents.
  *   NULL pointer zeros out META field.
+ * @return 0: success
  */
-void set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const uint8_t meta[14])
+int8_t set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const uint8_t meta[14])
 {
-	encode_callsign_bytes(lsf->src, src);
-	encode_callsign_bytes(lsf->dst, dst);
+	uint8_t src_b[6], dst_b[6];
+
+	//encode both callsigns first, so that a failure leaves the LSF untouched
+	if(src==NULL || dst==NULL || encode_callsign_bytes(src_b, src) || encode_callsign_bytes(dst_b, dst))
+		return -1;
+
+	memcpy(lsf->src, src_b, 6);
+	memcpy(lsf->dst, dst_b, 6);
 
 	lsf->type[0] = type >> 8;
 	lsf->type[1] = type & 0xFF;
@@ -45,6 +66,8 @@ void set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const 
 		memset(lsf->meta, 0, 14);
 
 	update_LSF_CRC(lsf);
+
+	return 0;
 }
 
 /**
@@ -139,15 +162,21 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
  * @param lsf Pointer to an LSF struct.
  * @param cf1 Callsign Field 1.
  * @param cf2 Callsign Field 2.
+ * @return 0: success
  */
-void set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2)
+int8_t set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2)
 {
 	uint8_t tmp[14] = {0};
 
-	encode_callsign_bytes(&tmp[0], cf1);
-	encode_callsign_bytes(&tmp[6], cf2);
+	if(cf1==NULL || encode_callsign_bytes(&tmp[0], cf1))
+		return -1;
+
+	if(cf2!=NULL && encode_callsign_bytes(&tmp[6], cf2))
+		return -1;
 
 	set_LSF_meta(lsf, tmp);
+
+	return 0;
 }
 
 /**
@@ -210,29 +239,9 @@ int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
 
 	if(bearing!=NULL) *bearing = ((uint16_t)(tmp[1] & 1) << 8) | tmp[2];
 
-	if(lat!=NULL)
-	{
-		int32_t v;
+	if(lat!=NULL) *lat = s24_be(&tmp[3])/8388607.0f * 90.0f;
 
-		for(uint8_t i=0; i<3; i++)
-			*((uint8_t*)&v+2-i) = tmp[3+i];
-		
-		*((uint8_t*)&v+3) = (tmp[3]&0x80) ? 0xFF : 0x00; //sign extension
-
-		*lat = v/8388607.0f * 90.0f;
-	}
-
-	if(lon!=NULL)
-	{
-		int32_t v;
-
-		for(uint8_t i=0; i<3; i++)
-			*((uint8_t*)&v+2-i) = tmp[6+i];
-		
-		*((uint8_t*)&v+3) = (tmp[6]&0x80) ? 0xFF : 0x00; //sign extension
-
-		*lon = v/8388607.0f * 180.0f;
-	}
+	if(lon!=NULL) *lon = s24_be(&tmp[6])/8388607.0f * 180.0f;
 
 	if(altitude!=NULL) *altitude = -500.0f + ((((uint16_t)tmp[9])<<8)+tmp[10]) / 2.0f;
 

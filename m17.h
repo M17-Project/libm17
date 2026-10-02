@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 13 January 2026
+// M17 Foundation, 2 October 2026
 //--------------------------------------------------------------------
 #pragma once
 
@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.1.9"
+#define LIBM17_VERSION		"1.2.0"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -36,7 +36,7 @@ extern "C" {
 #define M17_TYPE_ENCR_AES128	(0<<5)
 #define M17_TYPE_ENCR_AES192	(1<<5)
 #define M17_TYPE_ENCR_AES256	(2<<5)
-#define M17_TYPE_CAN(x)			(x<<7)
+#define M17_TYPE_CAN(x)			((((uint16_t)(x))&0xF)<<7)
 #define M17_TYPE_UNSIGNED		(0<<11)
 #define M17_TYPE_SIGNED			(1<<11)
 // When no encryption is used, the Encryption Subtype field describes META field contents.
@@ -143,11 +143,11 @@ void unpack_LICH(uint8_t* out, const uint8_t in[12]);
 
 // M17 C library - payload/lsf.c
 void update_LSF_CRC(lsf_t *lsf);
-void set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const uint8_t meta[14]);
+int8_t set_LSF(lsf_t *lsf, const char *src, const char *dst, uint16_t type, const uint8_t meta[14]);
 void set_LSF_meta(lsf_t *lsf, const uint8_t meta[14]);
 void set_LSF_meta_position(lsf_t *lsf, uint8_t data_source, uint8_t station_type,
 	float lat, float lon, uint8_t validity, float altitude, uint16_t bearing, float speed, float radius);
-void set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2);
+int8_t set_LSF_meta_ecd(lsf_t *lsf, const char *cf1, const char *cf2);
 void set_LSF_meta_nonce(lsf_t *lsf, time_t ts, const uint8_t rand[10]);
 int8_t get_LSF_meta_position(uint8_t *data_source, uint8_t *station_type,
 	float *lat, float *lon, uint8_t *validity, float *altitude, uint16_t *bearing, float *speed, float *radius, const lsf_t *lsf);
