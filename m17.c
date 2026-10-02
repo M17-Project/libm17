@@ -163,8 +163,9 @@ void gen_eot_i8(int8_t out[SYM_PER_FRA], uint32_t *cnt)
  * @param lsf Pointer to a structure holding Link Setup Frame data.
  * @param lich_cnt LICH counter (0..5).
  * @param fn Frame number.
+ * @return int8_t 0: success, -1: unknown frame type or LICH counter out of range (out is zeroed).
  */
-void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn)
+int8_t gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn)
 {
     uint8_t lich[6];                    //48 bits packed raw, unencoded LICH
     uint8_t lich_encoded[12];           //96 bits packed, encoded LICH
@@ -179,8 +180,12 @@ void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, 
     }
     else if(type==FRAME_STR)
     {
+        if(extract_LICH(lich, lich_cnt, lsf))
+        {
+            memset(out, 0, SYM_PER_FRA*sizeof(out[0]));
+            return -1;
+        }
         gen_syncword(out, &sym_cnt, SYNC_STR);
-        extract_LICH(lich, lich_cnt, lsf);
         encode_LICH(lich_encoded, lich);
         unpack_LICH(enc_bits, lich_encoded);
         conv_encode_stream_frame(&enc_bits[96], data, fn); //stream frames require 16-byte payloads
@@ -195,11 +200,18 @@ void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, 
         gen_syncword(out, &sym_cnt, SYNC_BER);
         conv_encode_bert_frame(enc_bits, data); //BERT frames require 197 BERT bits packed as 25 bytes
     }
+    else //unknown frame type
+    {
+        memset(out, 0, SYM_PER_FRA*sizeof(out[0]));
+        return -1;
+    }
 
     //common stuff
     reorder_bits(rf_bits, enc_bits);
     randomize_bits(rf_bits);
     gen_data(out, &sym_cnt, rf_bits);
+
+    return 0;
 }
 
 /**
@@ -211,8 +223,9 @@ void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, const frame_t type, 
  * @param lsf Pointer to a structure holding Link Setup Frame data.
  * @param lich_cnt LICH counter (0..5).
  * @param fn Frame number.
+ * @return int8_t 0: success, -1: unknown frame type or LICH counter out of range (out is zeroed).
  */
-void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn)
+int8_t gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t type, const lsf_t* lsf, const uint8_t lich_cnt, const uint16_t fn)
 {
     uint8_t lich[6];                    //48 bits packed raw, unencoded LICH
     uint8_t lich_encoded[12];           //96 bits packed, encoded LICH
@@ -227,6 +240,11 @@ void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t ty
     }
     else if(type==FRAME_STR)
     {
+        if(extract_LICH(lich, lich_cnt, lsf))
+        {
+            memset(out, 0, SYM_PER_FRA*sizeof(out[0]));
+            return -1;
+        }
         gen_syncword_i8(out, &sym_cnt, SYNC_STR);
         extract_LICH(lich, lich_cnt, lsf);
         encode_LICH(lich_encoded, lich);
@@ -243,11 +261,18 @@ void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, const frame_t ty
         gen_syncword_i8(out, &sym_cnt, SYNC_BER);
         conv_encode_bert_frame(enc_bits, data); //BERT frames require 197 BERT bits packed as 25 bytes
     }
+    else //unknown frame type
+    {
+        memset(out, 0, SYM_PER_FRA*sizeof(out[0]));
+        return -1;
+    }
 
     //common stuff
     reorder_bits(rf_bits, enc_bits);
     randomize_bits(rf_bits);
     gen_data_i8(out, &sym_cnt, rf_bits);
+
+    return 0;
 }
 
 /**

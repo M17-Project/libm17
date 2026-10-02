@@ -5,7 +5,7 @@
 // - Link Information CHannel (LICH) repacking functions
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 8 January 2024
+// M17 Project, 2 October 2026
 //--------------------------------------------------------------------
 #include <string.h>
 #include "m17.h"
@@ -16,9 +16,16 @@
  * @param outp 6-byte array for the LICH.
  * @param cnt LICH counter (0 to 5)
  * @param inp Pointer to an LSF struct.
+ * @return int8_t 0: success, -1: cnt out of range (outp is zeroed).
  */
-void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp)
+int8_t extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp)
 {
+    if(cnt > 5)
+    {
+        memset(outp, 0, 6);
+        return -1;
+    }
+
     switch(cnt)
     {
         case 0:
@@ -69,12 +76,14 @@ void extract_LICH(uint8_t outp[6], const uint8_t cnt, const lsf_t* inp)
             outp[4]=inp->crc[1];
         break;
 
-        default:
+        default: //unreachable, cnt is checked above
             ;
         break;
     }
 
     outp[5]=cnt<<5;
+    
+    return 0;
 }
 
 /**

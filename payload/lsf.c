@@ -10,6 +10,21 @@
 #include "m17.h"
 
 /**
+ * @brief Clamp a float to a range. NaN maps to the lower bound.
+ *
+ * @param x Input value.
+ * @param lo Lower bound.
+ * @param hi Upper bound.
+ * @return float Clamped value.
+ */
+static float clampf(float x, float lo, float hi)
+{
+	if(!(x >= lo)) return lo; //also catches NaN
+	if(x > hi) return hi;
+	return x;
+}
+
+/**
  * @brief Read a signed, 24-bit, big-endian two's complement value.
  * Independent of host byte order.
  *
@@ -119,7 +134,7 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
 	uint8_t log_r = 7;
 	for (uint8_t i = 0; i < 8; i++)
 	{
-		if (radius < radius_lut[i])
+		if (radius <= radius_lut[i])
 		{
 			log_r = i;
 			break;
@@ -131,8 +146,8 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
     tmp[2] = bearing&0xFF;								//bearing LSB
 
     int32_t lat_tmp, lon_tmp;							//lat, lon
-    lat_tmp = lat/90.0f * 8388607.0f;
-	lon_tmp = lon/180.0f * 8388607.0f;
+    lat_tmp = clampf(lat, -90.0f, 90.0f)/90.0f * 8388607.0f;
+	lon_tmp = clampf(lon, -180.0f, 180.0f)/180.0f * 8388607.0f;
 
 	tmp[3] = (lat_tmp >> 16) & 0xFF;
 	tmp[4] = (lat_tmp >> 8) & 0xFF;
@@ -142,15 +157,15 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
 	tmp[7] = (lon_tmp >> 8) & 0xFF;
 	tmp[8] = lon_tmp & 0xFF;
 
-    uint16_t alt = roundf((500.0f + altitude)*2.0f);	//altitude
+    uint16_t alt = roundf((500.0f + clampf(altitude, -500.0f, 32267.5f))*2.0f);	//altitude
 	tmp[9] = alt>>8;
     tmp[10] = alt&0xFF;
 
-    uint16_t spd = roundf(speed*2.0f);					//speed
+    uint16_t spd = roundf(clampf(speed, 0.0f, 2047.5f)*2.0f);					//speed
 	tmp[11] = spd>>4;
     tmp[12] = (spd&0xFF)<<4;
 
-    tmp[12] &= ~((uint8_t)0x0F);						//reserved
+    tmp[12] &= ~((uint8_t)0x0F);												//reserved
     tmp[13] = 0;
 
 	set_LSF_meta(lsf, tmp);

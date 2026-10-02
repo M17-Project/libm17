@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.3.0"
+#define LIBM17_VERSION		"1.3.1"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -103,8 +103,8 @@ void gen_data(float out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
 void gen_data_i8(int8_t out[SYM_PER_PLD], uint32_t* cnt, const uint8_t* in);
 void gen_eot(float out[SYM_PER_FRA], uint32_t* cnt);
 void gen_eot_i8(int8_t out[SYM_PER_FRA], uint32_t* cnt);
-void gen_frame(float out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
-void gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
+int8_t gen_frame(float out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
+int8_t gen_frame_i8(int8_t out[SYM_PER_FRA], const uint8_t* data, frame_t type, const lsf_t* lsf, uint8_t lich_cnt, uint16_t fn);
 
 typedef struct viterbi_ctx viterbi_ctx_t; //Viterbi decoder context, defined in the decode/viterbi.c section below
 uint32_t decode_LSF(lsf_t* lsf, const float pld_symbs[SYM_PER_PLD]);
@@ -142,7 +142,7 @@ uint16_t CRC_M17(const uint8_t* in, uint16_t len);
 uint16_t LSF_CRC(const lsf_t* in);
 
 // M17 C library - payload/lich.c
-void extract_LICH(uint8_t outp[6], uint8_t cnt, const lsf_t* inp);
+int8_t extract_LICH(uint8_t outp[6], uint8_t cnt, const lsf_t* inp);
 void unpack_LICH(uint8_t* out, const uint8_t in[12]);
 
 // M17 C library - payload/lsf.c
