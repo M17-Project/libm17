@@ -160,54 +160,44 @@ void viterbi_decode_bit(uint16_t s0, uint16_t s1, size_t pos)
  */
 void viterbi_decode_bit_ctx(viterbi_ctx_t* ctx, uint16_t s0, uint16_t s1, size_t pos)
 {
-	static const uint16_t COST_TABLE_0[] = {0, 0, 0, 0, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF};
-	static const uint16_t COST_TABLE_1[] = {0, 0xFFFF, 0xFFFF, 0, 0, 0xFFFF, 0xFFFF, 0};
+	//branch metric index for each butterfly: (expected G1)<<1 | (expected G2)
+	static const uint8_t BM_IDX[M17_CONVOL_STATES/2] = {0, 1, 1, 0, 2, 3, 3, 2};
 
 	if(ctx == NULL)
 		ctx = &viterbi_default_ctx;
 
+	//expected symbols are always 0 or 0xFFFF, so only 4 distinct branch metrics exist
+	const uint32_t n0 = 0xFFFFu - s0;
+	const uint32_t n1 = 0xFFFFu - s1;
+	const uint32_t bm[4] = {(uint32_t)s0 + s1, (uint32_t)s0 + n1, n0 + s1, n0 + n1};
+
 	const uint32_t *prevMetrics = ctx->metrics[ctx->cur];
 	uint32_t *currMetrics = ctx->metrics[ctx->cur ^ 1];
+	uint16_t hist = 0; //decision bits for this step, stored once at the end
 
 	for(uint8_t i = 0; i < M17_CONVOL_STATES/2; i++)
 	{
-		uint16_t e0 = COST_TABLE_0[i];
-		uint16_t e1 = COST_TABLE_1[i];
-
-		uint32_t bm0 = q_abs_diff(e0, s0) + q_abs_diff(e1, s1);
+		uint32_t bm0 = bm[BM_IDX[i]];
 		uint32_t bm1 = 0x1FFFE - bm0;
 
-		uint32_t m0 = prevMetrics[i] + bm0;
-		uint32_t m1 = prevMetrics[i + M17_CONVOL_STATES/2] + bm1;
+		uint32_t a = prevMetrics[i];
+		uint32_t b = prevMetrics[i + M17_CONVOL_STATES/2];
 
-		uint32_t m2 = prevMetrics[i] + bm1;
-		uint32_t m3 = prevMetrics[i + M17_CONVOL_STATES/2] + bm0;
+		uint32_t m0 = a + bm0;
+		uint32_t m1 = b + bm1;
+		uint32_t m2 = a + bm1;
+		uint32_t m3 = b + bm0;
 
-		uint8_t i0 = 2 * i;
-		uint8_t i1 = i0 + 1;
+		uint16_t d0 = (m0 >= m1);
+		uint16_t d1 = (m2 >= m3);
 
-		if(m0 >= m1)
-		{
-			ctx->history[pos]|=(1<<i0);
-			currMetrics[i0] = m1;
-		}
-		else
-		{
-			ctx->history[pos]&=~(1<<i0);
-			currMetrics[i0] = m0;
-		}
+		currMetrics[2*i]   = d0 ? m1 : m0;
+		currMetrics[2*i+1] = d1 ? m3 : m2;
 
-		if(m2 >= m3)
-		{
-			ctx->history[pos]|=(1<<i1);
-			currMetrics[i1] = m3;
-		}
-		else
-		{
-			ctx->history[pos]&=~(1<<i1);
-			currMetrics[i1] = m2;
-		}
+		hist |= (uint16_t)((d0 << (2*i)) | (d1 << (2*i+1)));
 	}
+
+	ctx->history[pos] = hist;
 
 	//swap
 	ctx->cur ^= 1;
