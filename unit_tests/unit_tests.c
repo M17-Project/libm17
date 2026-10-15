@@ -1161,6 +1161,29 @@ void crc_checks(void)
     testvec[101] ^= 0xFF;
 }
 
+/**
+ * @brief The fused RX front-end must match slice + derandomize + deinterleave.
+ */
+void fused_slice_derandomize_deinterleave(void)
+{
+    float symbs[SYM_PER_PLD];
+    uint16_t soft_bit[2*SYM_PER_PLD], ref[2*SYM_PER_PLD], fused[2*SYM_PER_PLD];
+
+    for(uint16_t n=0; n<1000; n++)
+    {
+        for(uint16_t i=0; i<SYM_PER_PLD; i++)
+            symbs[i] = 10.0f*(float)rand()/(float)RAND_MAX - 5.0f; //covers all slicer regions, incl. beyond +/-3
+
+        slice_symbols(soft_bit, symbs);
+        randomize_soft_bits(soft_bit);
+        reorder_soft_bits(ref, soft_bit);
+
+        slice_derandomize_deinterleave(fused, symbs);
+
+        TEST_ASSERT_EQUAL_UINT16_ARRAY(ref, fused, 2*SYM_PER_PLD);
+    }
+}
+
 int main(void)
 {
     srand(time(NULL));
@@ -1172,6 +1195,7 @@ int main(void)
 
     //symbol to dibit
     RUN_TEST(symbol_to_dibit);
+    RUN_TEST(fused_slice_derandomize_deinterleave);
 
     //soft Golay
     RUN_TEST(golay_encode);

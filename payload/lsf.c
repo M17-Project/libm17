@@ -5,7 +5,7 @@
 // - Link Setup Frame related functions
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 2 October 2026
+// M17 Foundation, 15 October 2026
 //--------------------------------------------------------------------
 #include "m17.h"
 
@@ -146,8 +146,8 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
     tmp[2] = bearing&0xFF;								//bearing LSB
 
     int32_t lat_tmp, lon_tmp;							//lat, lon
-    lat_tmp = clampf(lat, -90.0f, 90.0f)/90.0f * 8388607.0f;
-	lon_tmp = clampf(lon, -180.0f, 180.0f)/180.0f * 8388607.0f;
+    lat_tmp = (int32_t)(clampf(lat, -90.0f, 90.0f)/90.0f * 8388607.0f);
+	lon_tmp = (int32_t)(clampf(lon, -180.0f, 180.0f)/180.0f * 8388607.0f);
 
 	tmp[3] = (lat_tmp >> 16) & 0xFF;
 	tmp[4] = (lat_tmp >> 8) & 0xFF;
@@ -157,11 +157,11 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
 	tmp[7] = (lon_tmp >> 8) & 0xFF;
 	tmp[8] = lon_tmp & 0xFF;
 
-    uint16_t alt = roundf((500.0f + clampf(altitude, -500.0f, 32267.5f))*2.0f);	//altitude
+    uint16_t alt = (uint16_t)roundf((500.0f + clampf(altitude, -500.0f, 32267.5f))*2.0f);	//altitude
 	tmp[9] = alt>>8;
     tmp[10] = alt&0xFF;
 
-    uint16_t spd = roundf(clampf(speed, 0.0f, 2047.5f)*2.0f);					//speed
+    uint16_t spd = (uint16_t)roundf(clampf(speed, 0.0f, 2047.5f)*2.0f);					//speed
 	tmp[11] = spd>>4;
     tmp[12] = (spd&0xFF)<<4;
 

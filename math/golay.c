@@ -7,7 +7,7 @@
 // - Link Information Channel (LICH) decoder
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 2 October 2026
+// M17 Project, 15 October 2026
 //--------------------------------------------------------------------
 #include <string.h>
 #include "m17.h"
@@ -54,47 +54,58 @@ uint32_t golay24_encode(uint16_t data)
 }
 
 /**
- * @brief Soft-valued equivalent of `popcount()`
+ * @brief Soft XOR of a soft bit with a hard bit.
+ * Bit-exact equivalent of soft_bit_XOR(a, bit ? 0xFFFF : 0), without multiplications.
  *
- * @param in Pointer to an array holding soft logic vector.
- * @param siz Vector's size.
- * @return uint32_t Sum of all values.
+ * @param a Soft bit.
+ * @param bit Hard bit (0 or 1).
+ * @return uint16_t Soft result.
  */
-static uint32_t s_popcount(const uint16_t* in, uint8_t siz)
+static inline uint16_t s_xor_hard(uint16_t a, uint16_t bit)
 {
-	uint32_t tmp=0;
-
-	for(uint8_t i=0; i<siz; i++)
-		tmp+=in[i];
-
-	return tmp;
+    uint16_t v = bit ? (uint16_t)(0xFFFFU-a) : a;
+    return v ? v-1 : 0;
 }
 
 /**
- * @brief
+ * @brief XOR a 12-element soft vector with a 12-bit hard mask, in-place.
  *
- * @param out
- * @param value
+ * @param v Soft vector, element k matches bit k of the mask.
+ * @param mask Hard mask.
  */
-static void s_calc_checksum(uint16_t* out, const uint16_t* value)
+static void s_xor_mask(uint16_t v[12], uint16_t mask)
 {
-    uint16_t checksum[12];
-    uint16_t soft_em[12]; //soft valued encoded matrix entry
+    for(uint8_t k=0; k<12; k++)
+        v[k]=s_xor_hard(v[k], (mask>>k)&1);
+}
 
-    for(uint8_t i=0; i<12; i++)
-    	checksum[i]=0;
+/**
+ * @brief Soft weight (sum of all values) of a 12-element soft vector XORed with a hard mask.
+ *
+ * @param v Soft vector, element k matches bit k of the mask.
+ * @param mask Hard mask.
+ * @return uint32_t Soft weight.
+ */
+static uint32_t s_xor_mask_weight(const uint16_t v[12], uint16_t mask)
+{
+    uint32_t w=0;
+    for(uint8_t k=0; k<12; k++)
+        w+=s_xor_hard(v[k], (mask>>k)&1);
+    return w;
+}
 
-    for(uint8_t i=0; i<12; i++)
-    {
-    	int_to_soft(soft_em, encode_matrix[i], 12);
-
-        if(value[i]>0x7FFF)
-        {
-            soft_XOR(checksum, checksum, soft_em, 12);
-        }
-    }
-
-    memcpy((uint8_t*)out, (uint8_t*)checksum, 12*2);
+/**
+ * @brief Soft weight (sum of all values) of a 12-element soft vector.
+ *
+ * @param v Soft vector.
+ * @return uint32_t Soft weight.
+ */
+static uint32_t s_weight(const uint16_t v[12])
+{
+    uint32_t w=0;
+    for(uint8_t k=0; k<12; k++)
+        w+=v[k];
+    return w;
 }
 
 /**
@@ -105,108 +116,66 @@ static void s_calc_checksum(uint16_t* out, const uint16_t* value)
  */
 static uint32_t s_detect_errors(const uint16_t* codeword)
 {
-    uint16_t data[12];
-    uint16_t parity[12];
-    uint16_t cksum[12];
+    const uint16_t *parity = &codeword[0];
+    const uint16_t *data = &codeword[12];
+    uint16_t cksum[12] = {0};
     uint16_t syndrome[12];
     uint32_t weight; //for soft popcount
 
-	memcpy((uint8_t*)data, (const uint8_t*)&codeword[12], 2*12);
-	memcpy((uint8_t*)parity, (const uint8_t*)&codeword[0], 2*12);
-
-	s_calc_checksum(cksum, data);
-	soft_XOR(syndrome, parity, cksum, 12);
-
-	weight=s_popcount(syndrome, 12);
-
-	//all (less than 4) errors in the parity part
-    if(weight < 4*0xFFFE)
+    //soft checksum of the data part
+    for(uint8_t i=0; i<12; i++)
     {
-    	//printf("1: %1.2f\n", (float)weight/0xFFFF);
-        return soft_to_int(syndrome, 12);
+        if(data[i]>0x7FFF)
+            s_xor_mask(cksum, encode_matrix[i]);
     }
 
-    uint16_t scoded_error[12]; //soft coded_error
-    uint16_t sc[12]; //syndrome^coded_error
+    soft_XOR(syndrome, parity, cksum, 12);
+
+    const uint16_t s=soft_to_int(syndrome, 12);
+
+    //all (less than 4) errors in the parity part
+    if(s_weight(syndrome) < 4*0xFFFE)
+        return s;
 
     //one of the errors in data part, up to 3 in parity
     for(uint8_t i = 0; i<12; i++)
     {
-        uint16_t e = 1<<i;
         uint16_t coded_error = encode_matrix[i];
-
-        int_to_soft(scoded_error, coded_error, 12);
-        soft_XOR(sc, syndrome, scoded_error, 12);
-        weight=s_popcount(sc, 12);
-
-        if(weight < 3*0xFFFE)
-        {
-        	//printf("2: %1.2f\n", (float)weight/0xFFFF+1);
-        	uint16_t s=soft_to_int(syndrome, 12);
-            return (e << 12) | (s ^ coded_error);
-        }
+        if(s_xor_mask_weight(syndrome, coded_error) < 3*0xFFFE)
+            return ((uint32_t)(1<<i) << 12) | (s ^ coded_error);
     }
 
     //two of the errors in data part and up to 2 in parity
     for(uint8_t i = 0; i<11; i++)
     {
-    	for(uint8_t j = i+1; j<12; j++)
-    	{
-    		uint16_t e = (1<<i) | (1<<j);
-        	uint16_t coded_error = encode_matrix[i]^encode_matrix[j];
-
-	        int_to_soft(scoded_error, coded_error, 12);
-	        soft_XOR(sc, syndrome, scoded_error, 12);
-	        weight=s_popcount(sc, 12);
-
-	        if(weight < 2*0xFFFF)
-	        {
-	        	//printf("3: %1.2f\n", (float)weight/0xFFFF+2);
-	        	uint16_t s=soft_to_int(syndrome, 12);
-	            return (e << 12) | (s ^ coded_error);
-	        }
-		}
+        for(uint8_t j = i+1; j<12; j++)
+        {
+            uint16_t coded_error = encode_matrix[i]^encode_matrix[j];
+            if(s_xor_mask_weight(syndrome, coded_error) < 2*0xFFFF)
+                return ((uint32_t)((1<<i) | (1<<j)) << 12) | (s ^ coded_error);
+        }
     }
 
-	//algebraic decoding magic
-    uint16_t inv_syndrome[12]={0,0,0,0,0,0,0,0,0,0,0,0};
-    uint16_t dm[12]; //soft decode matrix
-
+    //algebraic decoding magic
+    uint16_t inv_syndrome[12] = {0};
     for(uint8_t i=0; i<12; i++)
     {
         if(syndrome[i] > 0x7FFF)
-        {
-        	int_to_soft(dm, decode_matrix[i], 12);
-        	soft_XOR(inv_syndrome, inv_syndrome, dm, 12);
-        }
+            s_xor_mask(inv_syndrome, decode_matrix[i]);
     }
 
-	//all (less than 4) errors in the data part
-	weight=s_popcount(inv_syndrome, 12);
+    //all (less than 4) errors in the data part
+    weight=s_weight(inv_syndrome);
+    const uint16_t is=soft_to_int(inv_syndrome, 12);
     if(weight < 4*0xFFFF)
-    {
-    	//printf("4: %1.2f\n", (float)weight/0xFFFF);
-        return soft_to_int(inv_syndrome, 12) << 12;
-    }
+        return (uint32_t)is << 12;
 
-	//one error in parity bits, up to 3 in data - this part has some quirks, the reason remains unknown
+    //one error in parity bits, up to 3 in data - this part has some quirks, the reason remains unknown
     for(uint8_t i=0; i<12; i++)
     {
-        uint16_t e = 1<<i;
         uint16_t coding_error = decode_matrix[i];
-
-        uint16_t ce[12]; //soft coding error
-        uint16_t tmp[12];
-
-        int_to_soft(ce, coding_error, 12);
-        soft_XOR(tmp, inv_syndrome, ce, 12);
-        weight=s_popcount(tmp, 12);
-
-        if(weight < 3*(0xFFFF+2))
-        {
-        	//printf("5: %1.2f\n", (float)weight/0xFFFF+1);
-            return ((soft_to_int(inv_syndrome, 12) ^ coding_error) << 12) | e;
-        }
+        if(s_xor_mask_weight(inv_syndrome, coding_error) < 3*(0xFFFF+2))
+            return ((uint32_t)(is ^ coding_error) << 12) | (1<<i);
     }
 
     return 0xFFFFFFFFUL;

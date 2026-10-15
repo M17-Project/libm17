@@ -2,7 +2,7 @@
 // M17 C library - m17.h
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Foundation, 2 October 2026
+// M17 Foundation, 15 October 2026
 //--------------------------------------------------------------------
 #pragma once
 
@@ -15,7 +15,7 @@ extern "C" {
 #include <time.h>
 #include <math.h>
 
-#define LIBM17_VERSION		"1.3.2"
+#define LIBM17_VERSION		"1.4.0"
 
 // M17 C library - syncword, payload, and frame sizes in symbols
 #define SYM_PER_SWD				8		//symbols per syncword
@@ -193,6 +193,7 @@ void randomize_soft_bits(uint16_t inp[SYM_PER_PLD*2]);
 
 // M17 C library - phy/slice.c
 void slice_symbols(uint16_t out[2*SYM_PER_PLD], const float inp[SYM_PER_PLD]);
+void slice_derandomize_deinterleave(uint16_t out[2*SYM_PER_PLD], const float inp[SYM_PER_PLD]);
 
 // M17 C library - math/rrc.c
 //sample RRC filter for 48kHz sample rate
@@ -241,7 +242,6 @@ struct viterbi_ctx
 	uint32_t metrics[2][M17_CONVOL_STATES];		//path metrics, previous/current (alternating)
 	uint8_t  cur;								//index of the previous metrics in metrics[]
 	uint16_t history[M17_VITERBI_HIST_LEN];		//decision history
-	uint16_t umsg[M17_VITERBI_HIST_LEN_2];		//de-punctured input buffer
 };
 
 //functions without the _ctx suffix use a shared internal context - not reentrant

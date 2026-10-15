@@ -5,9 +5,8 @@
 // - callsign encoders and decoders
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 2 October 2026
+// M17 Project, 15 October 2026
 //--------------------------------------------------------------------
-#include <stdio.h>
 #include <string.h>
 #include "m17.h"
 
@@ -27,7 +26,7 @@ void decode_callsign_value(char *outp, uint64_t inp)
 	{
         if(encoded==0xFFFFFFFFFFFF) //broadcast special address
         {
-            sprintf(outp, "@ALL");
+            memcpy(outp, "@ALL", 5);
             return;
         }
         else if(encoded<U40_9_8) //#-address range

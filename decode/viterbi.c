@@ -5,9 +5,8 @@
 // - the Viterbi decoder
 //
 // Wojciech Kaczmarski, SP5WWP
-// M17 Project, 2 October 2026
+// M17 Project, 15 October 2026
 //--------------------------------------------------------------------
-#include <stdio.h>
 #include <string.h>
 #include "m17.h"
 
@@ -98,43 +97,45 @@ uint32_t viterbi_decode_punctured_ctx(viterbi_ctx_t* ctx, uint8_t* out, const ui
 	if(ctx == NULL)
 		ctx = &viterbi_default_ctx;
 
-	uint16_t *umsg = ctx->umsg;		//unpunctured message
+	//depuncture on the fly - erasures (0x7FFF) are inserted where the
+	//puncturing pattern has a 0, no intermediate buffer is needed
 	uint16_t p=0;					//puncturer matrix entry
 	uint16_t u=0;					//bits count - unpunctured message
 	uint16_t i=0;					//bits read from the input message
+	size_t pos=0;					//trellis step
+
+	viterbi_reset_ctx(ctx);
 
 	while(i<in_len)
 	{
-		//the unpunctured length, not in_len, determines the buffer usage
-		//this also stops an all-zero puncturing pattern from looping forever
-		if(u >= M17_VITERBI_HIST_LEN_2)
-			return UINT32_MAX;
+		uint16_t s[2];
 
-		if(punct[p])
+		for(uint8_t k=0; k<2; k++)
 		{
-			umsg[u]=in[i];
-			i++;
-		}
-		else
-		{
-			umsg[u]=0x7FFF;
+			//the unpunctured length, not in_len, determines the history usage
+			//this also stops an all-zero puncturing pattern from looping forever
+			if(u >= M17_VITERBI_HIST_LEN_2)
+				return UINT32_MAX;
+
+			if(i>=in_len)
+			{
+				//pad an odd length result with an erasure, e.g. BERT: 368 bits with P2
+				//depuncture to 401, as the last punctured bit is discarded at the transmitter
+				s[k]=0x7FFF;
+			}
+			else
+			{
+				s[k] = punct[p] ? in[i++] : 0x7FFF;
+				if(++p == p_len)
+					p=0;
+			}
+			u++;
 		}
 
-		u++;
-		p++;
-		p%=p_len;
+		viterbi_decode_bit_ctx(ctx, s[0], s[1], pos++);
 	}
 
-	//pad an odd length result with an erasure, e.g. BERT: 368 bits with P2
-	//depuncture to 401, as the last punctured bit is discarded at the transmitter
-	if(u % 2)
-	{
-		if(u >= M17_VITERBI_HIST_LEN_2)
-			return UINT32_MAX;
-		umsg[u++]=0x7FFF;
-	}
-
-	return viterbi_decode_ctx(ctx, out, umsg, u) - (u-in_len)*0x7FFF;
+	return viterbi_chainback_ctx(ctx, out, pos, u/2) - (u-in_len)*0x7FFF;
 }
 
 /**
