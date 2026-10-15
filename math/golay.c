@@ -54,152 +54,204 @@ uint32_t golay24_encode(uint16_t data)
 }
 
 /**
- * @brief Soft XOR of a soft bit with a hard bit.
- * Bit-exact equivalent of soft_bit_XOR(a, bit ? 0xFFFF : 0), without multiplications.
- *
- * @param a Soft bit.
- * @param bit Hard bit (0 or 1).
- * @return uint16_t Soft result.
+ * @brief Number of least reliable bit positions tried by the Chase decoder.
+ * Chase-II uses d_min/2 = 4 positions (16 test patterns): together with the
+ * 3-error hard decoder this reaches up to 7 erroneous bits if they are the least
+ * reliable ones. Fewer positions make the decoder accept wrong codewords.
  */
-static inline uint16_t s_xor_hard(uint16_t a, uint16_t bit)
+#define M17_GOLAY_CHASE_BITS		4
+
+/**
+ * @brief Use the compiler's popcount builtin (1) or the portable SWAR fallback (0).
+ * Detected automatically: the builtin is only used where the target has a popcount
+ * instruction - elsewhere (e.g. Cortex-M, x86 without -mpopcnt) it becomes a library call.
+ * Can be forced with -DM17_HAVE_POPCOUNT=0 or -DM17_HAVE_POPCOUNT=1.
+ */
+#ifndef M17_HAVE_POPCOUNT
+#if (defined(__GNUC__) || defined(__clang__)) && \
+    (defined(__POPCNT__) ||                             /* x86 with POPCNT */ \
+     (defined(__aarch64__) && defined(__ARM_NEON)) ||   /* AArch64: CNT */ \
+     defined(__ARM_FEATURE_CSSC) ||                     /* AArch64 scalar CNT */ \
+     defined(__riscv_zbb))                              /* RISC-V Zbb: CPOP */
+#define M17_HAVE_POPCOUNT		1
+#else
+#define M17_HAVE_POPCOUNT		0
+#endif
+#endif
+
+/**
+ * @brief Number of set bits in a 12-bit value.
+ */
+static inline uint8_t popcnt12(uint16_t x)
 {
-    uint16_t v = bit ? (uint16_t)(0xFFFFU-a) : a;
-    return v ? v-1 : 0;
+#if M17_HAVE_POPCOUNT
+    return (uint8_t)__builtin_popcount(x);
+#else
+    //SWAR fallback
+    x = x - ((x>>1) & 0x555);
+    x = (x & 0x333) + ((x>>2) & 0x333);
+    x = (x + (x>>4)) & 0x70F;
+    return (uint8_t)((x & 0xFF) + (x>>8));
+#endif
 }
 
 /**
- * @brief XOR a 12-element soft vector with a 12-bit hard mask, in-place.
+ * @brief Hard-decision, bounded-distance Golay(24, 12) syndrome decoder.
+ * Finds the error pattern of weight up to 3 matching the syndrome.
  *
- * @param v Soft vector, element k matches bit k of the mask.
- * @param mask Hard mask.
+ * @param syndrome 12-bit syndrome: received parity XOR parity recomputed from received data.
+ * @return uint32_t 24-bit error pattern (data in the upper 12 bits),
+ *   or 0xFFFFFFFF if there are more than 3 errors.
  */
-static void s_xor_mask(uint16_t v[12], uint16_t mask)
+static uint32_t golay24_herrors(uint16_t syndrome)
 {
-    for(uint8_t k=0; k<12; k++)
-        v[k]=s_xor_hard(v[k], (mask>>k)&1);
-}
+    if(popcnt12(syndrome) <= 3) //all errors in the parity part
+        return syndrome;
 
-/**
- * @brief Soft weight (sum of all values) of a 12-element soft vector XORed with a hard mask.
- *
- * @param v Soft vector, element k matches bit k of the mask.
- * @param mask Hard mask.
- * @return uint32_t Soft weight.
- */
-static uint32_t s_xor_mask_weight(const uint16_t v[12], uint16_t mask)
-{
-    uint32_t w=0;
-    for(uint8_t k=0; k<12; k++)
-        w+=s_xor_hard(v[k], (mask>>k)&1);
-    return w;
-}
-
-/**
- * @brief Soft weight (sum of all values) of a 12-element soft vector.
- *
- * @param v Soft vector.
- * @return uint32_t Soft weight.
- */
-static uint32_t s_weight(const uint16_t v[12])
-{
-    uint32_t w=0;
-    for(uint8_t k=0; k<12; k++)
-        w+=v[k];
-    return w;
-}
-
-/**
- * @brief Detect errors in a soft-valued Golay(24, 12) codeword.
- *
- * @param codeword Input 24-bit soft codeword.
- * @return uint32_t Detected errors vector.
- */
-static uint32_t s_detect_errors(const uint16_t* codeword)
-{
-    const uint16_t *parity = &codeword[0];
-    const uint16_t *data = &codeword[12];
-    uint16_t cksum[12] = {0};
-    uint16_t syndrome[12];
-    uint32_t weight; //for soft popcount
-
-    //soft checksum of the data part
+    //one error in the data part, up to 2 in parity
     for(uint8_t i=0; i<12; i++)
     {
-        if(data[i]>0x7FFF)
-            s_xor_mask(cksum, encode_matrix[i]);
+        if(popcnt12(syndrome ^ encode_matrix[i]) <= 2)
+            return ((uint32_t)1 << (12+i)) | (syndrome ^ encode_matrix[i]);
     }
 
-    soft_XOR(syndrome, parity, cksum, 12);
-
-    const uint16_t s=soft_to_int(syndrome, 12);
-
-    //all (less than 4) errors in the parity part
-    if(s_weight(syndrome) < 4*0xFFFE)
-        return s;
-
-    //one of the errors in data part, up to 3 in parity
-    for(uint8_t i = 0; i<12; i++)
-    {
-        uint16_t coded_error = encode_matrix[i];
-        if(s_xor_mask_weight(syndrome, coded_error) < 3*0xFFFE)
-            return ((uint32_t)(1<<i) << 12) | (s ^ coded_error);
-    }
-
-    //two of the errors in data part and up to 2 in parity
-    for(uint8_t i = 0; i<11; i++)
-    {
-        for(uint8_t j = i+1; j<12; j++)
-        {
-            uint16_t coded_error = encode_matrix[i]^encode_matrix[j];
-            if(s_xor_mask_weight(syndrome, coded_error) < 2*0xFFFF)
-                return ((uint32_t)((1<<i) | (1<<j)) << 12) | (s ^ coded_error);
-        }
-    }
-
-    //algebraic decoding magic
-    uint16_t inv_syndrome[12] = {0};
+    uint16_t inv_syndrome = 0;
     for(uint8_t i=0; i<12; i++)
     {
-        if(syndrome[i] > 0x7FFF)
-            s_xor_mask(inv_syndrome, decode_matrix[i]);
+        if(syndrome & (1<<i))
+            inv_syndrome ^= decode_matrix[i];
     }
 
-    //all (less than 4) errors in the data part
-    weight=s_weight(inv_syndrome);
-    const uint16_t is=soft_to_int(inv_syndrome, 12);
-    if(weight < 4*0xFFFF)
-        return (uint32_t)is << 12;
+    if(popcnt12(inv_syndrome) <= 3) //all errors in the data part
+        return (uint32_t)inv_syndrome << 12;
 
-    //one error in parity bits, up to 3 in data - this part has some quirks, the reason remains unknown
+    //one error in the parity part, up to 2 in data
     for(uint8_t i=0; i<12; i++)
     {
-        uint16_t coding_error = decode_matrix[i];
-        if(s_xor_mask_weight(inv_syndrome, coding_error) < 3*(0xFFFF+2))
-            return ((uint32_t)(is ^ coding_error) << 12) | (1<<i);
+        if(popcnt12(inv_syndrome ^ decode_matrix[i]) <= 2)
+            return ((uint32_t)(inv_syndrome ^ decode_matrix[i]) << 12) | (1<<i);
     }
 
     return 0xFFFFFFFFUL;
 }
 
 /**
+ * @brief Syndrome change caused by flipping a single bit of a codeword.
+ *
+ * @param bit Bit index (0..23, data in the upper 12 bits).
+ * @return uint16_t Syndrome contribution.
+ */
+static inline uint16_t bit_syndrome(uint8_t bit)
+{
+    return bit >= 12 ? encode_matrix[bit-12] : (uint16_t)(1 << bit);
+}
+
+/**
+ * @brief Minimum soft distance advantage of the decoded codeword over the runner-up
+ * candidate, in units of one fully wrong bit (0xFFFF). Results that are not clearly
+ * better than an alternative are rejected - this keeps wrong LICH chunks from being
+ * accepted. Exact ties are always rejected.
+ */
+#ifndef M17_GOLAY_MIN_MARGIN
+#define M17_GOLAY_MIN_MARGIN		0.5f
+#endif
+
+/**
  * @brief Soft decode Golay(24, 12) codeword.
+ * Chase-II decoder: the least reliable bits of the hard decision are flipped
+ * in all combinations, each test word is decoded with a bounded-distance hard decoder,
+ * and the candidate closest to the received soft values wins.
+ * Candidates are compared by their extra distance over the hard decision:
+ * the sum of reliabilities |2s-0xFFFF| of the bits where they differ from it.
  *
  * @param codeword Pointer to a 24-element soft-valued (fixed-point) bit codeword.
- * @return uint16_t Decoded 12-bit data, or 0xFFFF if the codeword is uncorrectable.
+ * @return uint16_t Decoded 12-bit data, or 0xFFFF if the codeword is uncorrectable
+ *   or the result is ambiguous.
  */
 uint16_t golay24_sdecode(const uint16_t codeword[24])
 {
-    //match the bit order in M17
-    uint16_t cw[24]; //local copy
+    uint32_t r=0;                               //hard decision, bit 23 first
+    uint16_t rel[24];                           //reliabilities, indexed by bit number
+    uint8_t pos[M17_GOLAY_CHASE_BITS];          //least reliable bit positions
+
     for(uint8_t i=0; i<24; i++)
-        cw[i]=codeword[23-i];
+    {
+        uint16_t v=codeword[23-i];
+        r |= (uint32_t)(v>0x7FFF) << i;
+        rel[i] = (v>0x7FFF) ? 2*(v-0x7FFF)-1 : 0xFFFF-2*v; //|2v-0xFFFF|
+    }
 
-    uint32_t errors = s_detect_errors(cw);
+    //pick the least reliable positions (partial selection sort)
+    //distance from the decision threshold, ties go to the more significant bit
+    uint32_t taken=0;
+    for(uint8_t k=0; k<M17_GOLAY_CHASE_BITS; k++)
+    {
+        uint8_t m=0xFF;
+        uint16_t m_dist=0xFFFF;
+        for(int8_t i=23; i>=0; i--)
+        {
+            uint16_t v=codeword[23-i];
+            uint16_t dist=(v>0x7FFF) ? v-0x7FFF : 0x7FFF-v;
+            if(!(taken & (1UL<<i)) && (m==0xFF || dist<m_dist))
+            {
+                m=i;
+                m_dist=dist;
+            }
+        }
+        pos[k]=m;
+        taken|=1UL<<m;
+    }
 
-    if(errors == 0xFFFFFFFF)
-		return 0xFFFF;
+    const uint16_t syndrome = (r ^ golay24_encode(r >> 12)) & 0xFFF;
+    uint32_t best_d=UINT32_MAX, best_c=0, second_d=UINT32_MAX;
 
-    return (((soft_to_int(&cw[0], 16) | (soft_to_int(&cw[16], 8) << 16)) ^ errors) >> 12) & 0x0FFF;
+    for(uint16_t t=0; t<(1U<<M17_GOLAY_CHASE_BITS); t++)
+    {
+        uint32_t flip=0;
+        uint16_t syn=syndrome;
+        for(uint8_t k=0; k<M17_GOLAY_CHASE_BITS; k++)
+        {
+            if(t & (1U<<k))
+            {
+                flip |= (uint32_t)1<<pos[k];
+                syn ^= bit_syndrome(pos[k]);
+            }
+        }
+
+        uint32_t e=golay24_herrors(syn);
+        if(e==0xFFFFFFFFUL)
+            continue;
+
+        uint32_t diff = flip ^ e;               //candidate codeword is r^diff
+        uint32_t c = r ^ diff;
+        if(c==best_c && best_d!=UINT32_MAX)     //same candidate found again
+            continue;
+
+        uint32_t d=0;
+        while(diff)
+        {
+            d += rel[__builtin_ctz(diff)];
+            diff &= diff-1;
+        }
+
+        if(d<best_d)
+        {
+            second_d=best_d;
+            best_d=d;
+            best_c=c;
+        }
+        else if(d<second_d)
+        {
+            second_d=d;
+        }
+    }
+
+    if(best_d==UINT32_MAX)                                                  //nothing decodable
+        return 0xFFFF;
+    if(second_d!=UINT32_MAX && second_d-best_d <= (uint32_t)(M17_GOLAY_MIN_MARGIN*0xFFFF)) //ambiguous result
+        return 0xFFFF;
+
+    return best_c>>12;
 }
 
 /**
