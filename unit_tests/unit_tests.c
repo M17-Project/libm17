@@ -1098,7 +1098,7 @@ static void meta_position(void)
     uint8_t q = 7;
     for (uint8_t i = 0; i < 8; i++)
     {
-        if (radius < radius_lut[i])
+        if (radius <= radius_lut[i])
         {
             q = i;
             break;
