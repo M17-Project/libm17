@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 find_package(LATEX)
 set(enable_dot_graphs ${DOXYGEN_DOT_FOUND})
 set(enable_html_docs YES)
