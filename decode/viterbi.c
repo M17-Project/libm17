@@ -22,7 +22,7 @@ static viterbi_ctx_t viterbi_default_ctx;
  * @param out Destination array where decoded data is written.
  * @param in Input data.
  * @param len Input length in bits.
- * @return Number of bit errors corrected, or UINT32_MAX on invalid arguments.
+ * @return Viterbi path metric (soft cost, about 0xFFFF per hard bit error), or UINT32_MAX on invalid arguments.
  */
 uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len)
 {
@@ -36,7 +36,7 @@ uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, uint16_t len)
  * @param out Destination array where decoded data is written.
  * @param in Input data.
  * @param len Input length in bits.
- * @return Number of bit errors corrected, or UINT32_MAX on invalid arguments.
+ * @return Viterbi path metric (soft cost, about 0xFFFF per hard bit error), or UINT32_MAX on invalid arguments.
  */
 uint32_t viterbi_decode_ctx(viterbi_ctx_t* ctx, uint8_t* out, const uint16_t* in, uint16_t len)
 {
@@ -71,7 +71,8 @@ uint32_t viterbi_decode_ctx(viterbi_ctx_t* ctx, uint8_t* out, const uint16_t* in
  * @param punct Puncturing matrix.
  * @param in_len Input data length.
  * @param p_len Puncturing matrix length (entries).
- * @return Number of bit errors corrected, or UINT32_MAX on invalid arguments.
+ * @return Viterbi path metric (soft cost, about 0xFFFF per hard bit error), or UINT32_MAX on invalid arguments.
+ * The cost of the inserted erasures is subtracted.
  */
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len)
 {
@@ -87,7 +88,8 @@ uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_
  * @param punct Puncturing matrix.
  * @param in_len Input data length.
  * @param p_len Puncturing matrix length (entries).
- * @return Number of bit errors corrected, or UINT32_MAX on invalid arguments.
+ * @return Viterbi path metric (soft cost, about 0xFFFF per hard bit error), or UINT32_MAX on invalid arguments.
+ * The cost of the inserted erasures is subtracted.
  */
 uint32_t viterbi_decode_punctured_ctx(viterbi_ctx_t* ctx, uint8_t* out, const uint16_t* in, const uint8_t* punct, uint16_t in_len, uint16_t p_len)
 {
@@ -145,7 +147,7 @@ uint32_t viterbi_decode_punctured_ctx(viterbi_ctx_t* ctx, uint8_t* out, const ui
  *
  * @param s0 Cost of the first symbol.
  * @param s1 Cost of the second symbol.
- * @param pos Bit position in history.
+ * @param pos Bit position in history, 0..M17_VITERBI_HIST_LEN-1 (other values are ignored).
  */
 void viterbi_decode_bit(uint16_t s0, uint16_t s1, size_t pos)
 {
@@ -158,12 +160,15 @@ void viterbi_decode_bit(uint16_t s0, uint16_t s1, size_t pos)
  * @param ctx Pointer to a decoder context (NULL: shared internal context, not reentrant).
  * @param s0 Cost of the first symbol.
  * @param s1 Cost of the second symbol.
- * @param pos Bit position in history.
+ * @param pos Bit position in history, 0..M17_VITERBI_HIST_LEN-1 (other values are ignored).
  */
 void viterbi_decode_bit_ctx(viterbi_ctx_t* ctx, uint16_t s0, uint16_t s1, size_t pos)
 {
 	//branch metric index for each butterfly: (expected G1)<<1 | (expected G2)
 	static const uint8_t BM_IDX[M17_CONVOL_STATES/2] = {0, 1, 1, 0, 2, 3, 3, 2};
+
+	if(pos >= M17_VITERBI_HIST_LEN)
+		return; //would write past the history
 
 	if(ctx == NULL)
 		ctx = &viterbi_default_ctx;
@@ -210,9 +215,9 @@ void viterbi_decode_bit_ctx(viterbi_ctx_t* ctx, uint16_t s0, uint16_t s1, size_t
  * Uses the shared internal context - not reentrant.
  *
  * @param out Destination byte array for decoded data.
- * @param pos Starting position for the chainback.
- * @param len Length of the output in bits (minus K-1=4).
- * @return Minimum Viterbi cost at the end of the decode sequence.
+ * @param pos Number of trellis steps to chain back, at most M17_VITERBI_HIST_LEN and len+4.
+ * @param len Length of the output in bits, minus K-1=4: out must hold (len+4+7)/8 bytes.
+ * @return Minimum Viterbi cost at the end of the decode sequence, or UINT32_MAX on invalid arguments.
  */
 uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len)
 {
@@ -224,14 +229,18 @@ uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len)
  *
  * @param ctx Pointer to a decoder context (NULL: shared internal context, not reentrant).
  * @param out Destination byte array for decoded data.
- * @param pos Starting position for the chainback.
- * @param len Length of the output in bits (minus K-1=4).
- * @return Minimum Viterbi cost at the end of the decode sequence.
+ * @param pos Number of trellis steps to chain back, at most M17_VITERBI_HIST_LEN and len+4.
+ * @param len Length of the output in bits, minus K-1=4: out must hold (len+4+7)/8 bytes.
+ * @return Minimum Viterbi cost at the end of the decode sequence, or UINT32_MAX on invalid arguments.
  */
 uint32_t viterbi_chainback_ctx(viterbi_ctx_t* ctx, uint8_t* out, size_t pos, uint16_t len)
 {
 	uint8_t state = 0;
-	size_t bitPos = len+4;
+	size_t bitPos = (size_t)len+4;
+
+	//pos beyond the history or the output would read or write out of bounds
+	if(pos > M17_VITERBI_HIST_LEN || pos > bitPos)
+		return UINT32_MAX;
 
 	if(ctx == NULL)
 		ctx = &viterbi_default_ctx;
