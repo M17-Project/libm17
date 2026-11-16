@@ -107,11 +107,11 @@ void set_LSF_meta(lsf_t *lsf, const uint8_t meta[14])
  * @brief Fill the LSF META field with position data and update the CRC.
  * 
  * @param lsf Pointer to an LSF struct.
- * @param data_source Data source.
- * @param station_type Type of the transmitting station.
+ * @param data_source Data source (4 bits, higher bits are ignored).
+ * @param station_type Type of the transmitting station (4 bits, higher bits are ignored).
  * @param lat Latitude in degrees.
  * @param lon Longitude in degrees.
- * @param validity Data validity field.
+ * @param validity Data validity field (4 bits, higher bits are ignored).
  * @param altitude Altitude in meters.
  * @param bearing Bearing in degrees.
  * @param speed Speed in kilometers per hour.
@@ -123,9 +123,9 @@ void set_LSF_meta_position(lsf_t *lsf, const uint8_t data_source, const uint8_t 
 {
 	uint8_t tmp[14] = {0};
 
-	tmp[0] = (data_source<<4) | station_type;
+	tmp[0] = ((data_source & 0x0F)<<4) | (station_type & 0x0F);
 
-    tmp[1] |= validity<<4;								//gnss data validity field
+    tmp[1] |= (validity & 0x0F)<<4;								//gnss data validity field
 	static const float radius_lut[8] =
 	{
 		1.0f, 2.0f, 4.0f, 8.0f,

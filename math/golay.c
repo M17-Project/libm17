@@ -97,6 +97,25 @@ static inline uint8_t popcnt12(uint16_t x)
 }
 
 /**
+ * @brief Index of the lowest set bit of a non-zero value.
+ * Uses the compiler builtin with GCC and Clang, a portable loop elsewhere.
+ */
+static inline uint8_t ctz32(uint32_t x)
+{
+#if defined(__GNUC__) || defined(__clang__)
+    return (uint8_t)__builtin_ctz(x);
+#else
+    uint8_t n=0;
+    while(!(x & 1))
+    {
+        x >>= 1;
+        n++;
+    }
+    return n;
+#endif
+}
+
+/**
  * @brief Hard-decision, bounded-distance Golay(24, 12) syndrome decoder.
  * Finds the error pattern of weight up to 3 matching the syndrome.
  *
@@ -231,7 +250,7 @@ uint16_t golay24_sdecode(const uint16_t codeword[24])
         uint32_t d=0;
         while(diff)
         {
-            d += rel[__builtin_ctz(diff)];
+            d += rel[ctz32(diff)];
             diff &= diff-1;
         }
 
